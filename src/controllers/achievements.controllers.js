@@ -1,21 +1,30 @@
 const achModel = require('../models/achievement.models');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
-
-
+const imagekit = require("../services/imagekit.services");
 // CREATE ACHIEVEMENT
 const postAchievement = async (req, res) => {
     try {
+
         const {
             title,
             type,
             organization,
             date,
             description,
-            position,
-            certificateUrl
+            position
         } = req.body;
+
+        let certificateUrl = null;
+
+        if (req.file) {
+
+            const result = await imagekit.files.upload({
+                file: req.file.buffer.toString("base64"),
+                fileName: req.file.originalname,
+                folder: "/proofolio/certificates"
+            });
+
+            certificateUrl = result.url;
+        }
 
         const achievement = await achModel.create({
             title,
@@ -34,6 +43,9 @@ const postAchievement = async (req, res) => {
         });
 
     } catch (error) {
+
+        console.error(error);
+
         res.status(500).json({
             message: "Failed to create achievement",
             error: error.message
