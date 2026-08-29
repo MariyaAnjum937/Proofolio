@@ -747,3 +747,53 @@ button:disabled {
     align-items: flex-start;
   }
 }
+
+/* Achievement title + delete button */
+.achievement-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.achievement-title-row h2 {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.delete-button {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+
+  font-size: 16px;
+  cursor: pointer;
+
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.delete-button:hover {
+  background: var(--color-danger-soft);
+  border-color: #fda29b;
+  color: var(--color-danger);
+  transform: none;
+  box-shadow: none;
+}
+
+.delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
