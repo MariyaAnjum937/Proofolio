@@ -11,6 +11,6 @@ router.post(
     achController.postAchievement
 );
 router.get('/achievements/get',authMiddleware, achController.displayAchievements);
-
+router.delete("/delete/:id", achController.deleteAchievement);
 
 module.exports = router;
