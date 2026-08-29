@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 function CreateAchievement() {
@@ -77,66 +76,90 @@ function CreateAchievement() {
         </p>
 
         {/* Title */}
-
-        <input
-          type="text"
-          placeholder="Achievement title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
+        <div className="field">
+          <label htmlFor="title">Title</label>
+          <input
+            id="title"
+            type="text"
+            placeholder="e.g. Winner - National Hackathon"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
 
         {/* Type */}
-
-        <select
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        >
-        <option value="">Select achievement type</option>
-        <option value="Hackathon">Hackathon</option>
-        <option value="Internship">Internship</option>
-        <option value="Certification">Certification</option>
-        <option value="Workshop">Workshop</option>
-        <option value="Competition">Competition</option>
-        </select>
+        <div className="field">
+          <label htmlFor="type">Type</label>
+          <select
+            id="type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+          >
+            <option value="">Select achievement type</option>
+            <option value="Hackathon">Hackathon</option>
+            <option value="Internship">Internship</option>
+            <option value="Certification">Certification</option>
+            <option value="Workshop">Workshop</option>
+            <option value="Competition">Competition</option>
+          </select>
+        </div>
 
         {/* Organization */}
-
-        <input
-          type="text"
-          placeholder="Organization"
-          value={organization}
-          onChange={(e) => setOrganization(e.target.value)}
-        />
+        <div className="field">
+          <label htmlFor="organization">Organization</label>
+          <input
+            id="organization"
+            type="text"
+            placeholder="e.g. Google, MIT, Devfolio"
+            value={organization}
+            onChange={(e) => setOrganization(e.target.value)}
+          />
+        </div>
 
         {/* Date */}
-
-        <label>
-          Achievement Date
-        </label>
-
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
+        <div className="field">
+          <label htmlFor="date">Achievement Date</label>
+          <input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
 
         {/* Description */}
-
-        <textarea
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows="5"
-        />
+        <div className="field">
+          <label htmlFor="description">Description</label>
+          <textarea
+            id="description"
+            placeholder="Briefly describe what you did and what you learned"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows="5"
+          />
+        </div>
 
         {/* Certificate */}
+        <div className="field">
+          <label htmlFor="certificate">Certificate</label>
 
-        <input
-          type="file"
-          onChange={(e) =>
-            setCertificate(e.target.files[0])
-          }
-        />
+          <input
+            id="certificate"
+            className="file-input"
+            type="file"
+            onChange={(e) =>
+              setCertificate(e.target.files[0])
+            }
+          />
+          <label htmlFor="certificate" className="file-label">
+            <span className="file-icon">📎</span>
+            {certificate ? "Change file" : "Choose a file"}
+          </label>
+
+          {certificate && (
+            <span className="file-name">{certificate.name}</span>
+          )}
+        </div>
 
         <button onClick={createAchievement}>
           Add Achievement
@@ -155,4 +178,3 @@ function CreateAchievement() {
 }
 
 export default CreateAchievement;
-

@@ -1,9 +1,10 @@
-
 import { Link } from "react-router-dom";
 
 function Home() {
   return (
     <div className="page home">
+
+      <span className="eyebrow">✨ Achievement Portfolio</span>
 
       <h1>Welcome to Proofolio 👋</h1>
 
@@ -27,4 +28,3 @@ function Home() {
 }
 
 export default Home;
-

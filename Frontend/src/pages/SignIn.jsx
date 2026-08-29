@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-function SignIn() {
+function SignIn({ setIsLoggedIn }) {
 
   const navigate = useNavigate();
 
@@ -10,6 +9,7 @@ function SignIn() {
   const [password, setPassword] = useState("");
 
   const [message, setMessage] = useState("");
+
 
   const signIn = async () => {
 
@@ -33,9 +33,15 @@ function SignIn() {
         }
       );
 
+
       const data = await response.json();
 
+
       if (response.ok) {
+
+        localStorage.setItem("isLoggedIn", "true");
+
+        setIsLoggedIn(true);
 
         setMessage(
           data.message || "Signed in successfully!"
@@ -43,7 +49,8 @@ function SignIn() {
 
         setTimeout(() => {
           navigate("/dashboard");
-        }, 800);
+        }, 500);
+
 
       } else {
 
@@ -61,6 +68,7 @@ function SignIn() {
     }
   };
 
+
   return (
     <div className="page">
 
@@ -68,21 +76,31 @@ function SignIn() {
 
         <h1>Welcome Back 👋</h1>
 
-        <p>Sign in to access your achievements.</p>
+        <p>
+          Sign in to access your achievements.
+        </p>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="field">
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="field">
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
         <button onClick={signIn}>
           Sign In
@@ -94,7 +112,7 @@ function SignIn() {
           </p>
         )}
 
-        <p>
+        <p className="form-footer">
           Don't have an account?{" "}
           <Link to="/signup">
             Create one
@@ -107,5 +125,5 @@ function SignIn() {
   );
 }
 
-export default SignIn;
 
+export default SignIn;
