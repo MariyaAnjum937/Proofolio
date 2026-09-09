@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 import Home from "./pages/Home";
@@ -15,6 +15,10 @@ function App() {
   );
 
   const navigate = useNavigate();
+
+  const ProtectedRoute = ({ children }) => (
+    isLoggedIn ? children : <Navigate to="/signin" replace />
+  );
 
 
   const handleLogout = async () => {
@@ -114,10 +118,24 @@ function App() {
       {/* Pages */}
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/signup" element={<SignUp setIsLoggedIn={setIsLoggedIn} />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route path="/signin" element={<SignIn setIsLoggedIn={setIsLoggedIn} />} />
-        <Route path="/create" element={<CreateAchievement />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/create"
+          element={
+            <ProtectedRoute>
+              <CreateAchievement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
 
     </>

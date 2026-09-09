@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-function SignUp({ setIsLoggedIn }) {
-
+function SignUp() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -45,17 +44,12 @@ function SignUp({ setIsLoggedIn }) {
 
       if (response.ok) {
 
-        localStorage.setItem("isLoggedIn", "true");
-
-        setIsLoggedIn(true);
-
-        setMessage(
-          data.message || "Account created successfully!"
-        );
-
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 500);
+        localStorage.removeItem("isLoggedIn");
+        navigate("/signin", {
+          state: {
+            message: "Account created successfully. Please sign in.",
+          },
+        });
 
 
       } else {
