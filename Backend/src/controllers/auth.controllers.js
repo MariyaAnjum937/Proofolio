@@ -51,7 +51,7 @@ async function loginUser(req, res){
         })
     }
 
-    const token = jwt.sign({id : userExists._id}, process.env.JWT_SECRET);
+    const token = jwt.sign({id : userExists._id, role : userExists.role}, process.env.JWT_SECRET);
     res.cookie("token", token);
 
     return res.status(201).json({

@@ -2,6 +2,9 @@ const express = require('express');
 const app = express();
 const authroutes = require('./routes/auth.routes');
 const achievementsroutes = require('./routes/achievements.routes');
+const roleRoutes = require('./routes/roles.routes');
+
+
 const cookieParser = require('cookie-parser')
 const cors = require("cors");
 
@@ -15,9 +18,9 @@ app.use(
   })
 );
 
-app.use('/api',authroutes);
+app.use('/api', authroutes);
 app.use('/api', achievementsroutes);
-
+app.use('/api', roleRoutes);
 
 
 module.exports = app;
