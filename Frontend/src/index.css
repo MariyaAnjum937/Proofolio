@@ -650,6 +650,35 @@ button:disabled {
   color: var(--color-text-secondary);
 }
 
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 18px;
+  padding: 7px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.status-badge.pending {
+  background: #fff7ed;
+  color: #b45309;
+  border-color: #fed7aa;
+}
+
+.status-badge.verified {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+}
+
+.status-badge.rejected {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: #fecaca;
+}
+
 .empty {
   background: var(--color-surface);
   padding: 56px 24px;
@@ -666,6 +695,265 @@ button:disabled {
 
 .empty p {
   margin: 0;
+}
+
+.faculty-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.faculty-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+}
+
+.faculty-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.faculty-card-header h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.eyebrow.small {
+  margin-bottom: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.faculty-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.verify-button,
+.reject-button {
+  white-space: nowrap;
+}
+
+.reject-button {
+  background: transparent;
+  border: 1px solid #fda29b;
+  color: var(--color-danger);
+}
+
+.reject-button:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: #fda29b;
+}
+
+.faculty-meta,
+.faculty-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.meta-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.faculty-details-grid p,
+.faculty-description p,
+.faculty-meta strong {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.faculty-description {
+  margin-top: 10px;
+}
+
+.faculty-certificate {
+  margin-top: 18px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card span {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.stat-card strong {
+  font-size: 28px;
+  color: var(--color-text-primary);
+}
+
+.pending-stat {
+  border-color: #f6d8a6;
+}
+
+.pending-stat strong {
+  color: #b45309;
+}
+
+.verified-stat {
+  border-color: #bbf7d0;
+}
+
+.verified-stat strong {
+  color: var(--color-success-text);
+}
+
+.admin-stats-row {
+  margin-top: 8px;
+}
+
+.admin-panel {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.admin-form,
+.admin-users-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-form h2,
+.admin-users-panel h2 {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+.search-field {
+  margin-bottom: 20px;
+}
+
+.admin-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+}
+
+.admin-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-user-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-user-info span {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+}
+
+.role-pill.student {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.role-pill.faculty {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.role-pill.admin {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-user-actions select {
+  width: 140px;
+}
+
+.admin-delete {
+  width: auto;
+  height: auto;
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  margin: 0;
+}
+
+.admin-delete:hover {
+  background: #fee4e2;
+  color: var(--color-danger);
+}
+
+@media (max-width: 900px) {
+  .admin-panel {
+    grid-template-columns: 1fr;
+  }
 }
 /* ============================
    SITE-WIDE BACKGROUND IMAGE

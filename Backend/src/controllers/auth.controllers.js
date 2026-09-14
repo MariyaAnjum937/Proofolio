@@ -58,7 +58,8 @@ async function loginUser(req, res){
         message : 'login successful.',
         user : {
             username : userExists.username,
-            email : userExists.email
+            email : userExists.email,
+            role : userExists.role
         }
     })
 }

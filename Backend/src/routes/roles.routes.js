@@ -21,7 +21,34 @@ router.post('/role/admin',
     roleController.adminRole
 );
 
+router.get('/admin/users',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.getAllUsers
+);
 
+router.get('/admin/overview',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.getAdminOverview
+);
 
+router.post('/admin/users',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.createUserByAdmin
+);
+
+router.patch('/admin/users/:id/role',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.updateUserRoleByAdmin
+);
+
+router.delete('/admin/users/:id',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.deleteUserByAdmin
+);
 
 module.exports = router;

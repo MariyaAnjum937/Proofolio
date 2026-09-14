@@ -161,6 +161,12 @@ const verifyAchievement = async (req, res) => {
             });
         }
 
+        if (achievement.verificationStatus === "rejected") {
+            return res.status(400).json({
+                message: "Achievement is already rejected"
+            });
+        }
+
         achievement.verificationStatus = "verified";
         achievement.verifiedBy = req.user.id;
         achievement.verifiedAt = new Date();
@@ -183,12 +189,60 @@ const verifyAchievement = async (req, res) => {
     }
 };
 
+const rejectAchievement = async (req, res) => {
+    try {
+
+        const { id } = req.params;
+
+        const achievement = await achModel.findById(id);
+
+        if (!achievement) {
+            return res.status(404).json({
+                message: "Achievement not found"
+            });
+        }
+
+        if (achievement.verificationStatus === "verified") {
+            return res.status(400).json({
+                message: "Achievement is already verified"
+            });
+        }
+
+        if (achievement.verificationStatus === "rejected") {
+            return res.status(400).json({
+                message: "Achievement is already rejected"
+            });
+        }
+
+        achievement.verificationStatus = "rejected";
+        achievement.verifiedBy = req.user.id;
+        achievement.verifiedAt = new Date();
+
+        await achievement.save();
+
+        res.status(200).json({
+            message: "Achievement rejected successfully",
+            achievement
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            message: "Failed to reject achievement",
+            error: error.message
+        });
+    }
+};
+
 
 module.exports = {
     postAchievement,
     displayAchievements,
     deleteAchievement,
     getPendingAchievements,
-    verifyAchievement
+    verifyAchievement,
+    rejectAchievement
 };
 

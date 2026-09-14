@@ -36,4 +36,10 @@ router.patch( "/achievements/:id/verify",
     achController.verifyAchievement
 );
 
+router.patch( "/achievements/:id/reject", 
+    authMiddleware, 
+    roleMiddleware("faculty"), 
+    achController.rejectAchievement
+);
+
 module.exports = router;
