@@ -180,6 +180,13 @@ function Dashboard() {
                 <div className={`status-badge ${getStatusClassName(achievement.verificationStatus)}`}>
                   {getVerificationLabel(achievement.verificationStatus)}
                 </div>
+
+                {achievement.verificationStatus === "rejected" && achievement.rejectionRemark && (
+                  <div className="rejection-remark">
+                    <strong>Faculty remark</strong>
+                    <p>{achievement.rejectionRemark}</p>
+                  </div>
+                )}
               </div>
             </div>
           ))

@@ -62,6 +62,12 @@ const achievementSchema = new mongoose.Schema(
       default: "pending"
     },
 
+    rejectionRemark: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
     verifiedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",

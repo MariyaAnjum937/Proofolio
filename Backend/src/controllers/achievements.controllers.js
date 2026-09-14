@@ -193,6 +193,16 @@ const rejectAchievement = async (req, res) => {
     try {
 
         const { id } = req.params;
+        const requestBody = req.body || {};
+        const rejectionRemark = typeof requestBody.rejectionRemark === "string"
+            ? requestBody.rejectionRemark.trim()
+            : "";
+
+        if (!rejectionRemark) {
+            return res.status(400).json({
+                message: "A rejection remark is required."
+            });
+        }
 
         const achievement = await achModel.findById(id);
 
@@ -215,6 +225,7 @@ const rejectAchievement = async (req, res) => {
         }
 
         achievement.verificationStatus = "rejected";
+        achievement.rejectionRemark = rejectionRemark;
         achievement.verifiedBy = req.user.id;
         achievement.verifiedAt = new Date();
 

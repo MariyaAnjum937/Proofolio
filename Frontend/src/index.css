@@ -737,6 +737,51 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.rejection-remark-field {
+  margin-bottom: 20px;
+}
+
+.rejection-remark-field label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rejection-remark-field textarea {
+  width: 100%;
+  min-height: 82px;
+  resize: vertical;
+}
+
+.field-error {
+  margin: 6px 0 0;
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rejection-remark {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--color-danger);
+  background: var(--color-danger-soft);
+  color: var(--color-text-primary);
+}
+
+.rejection-remark strong {
+  display: block;
+  color: var(--color-danger);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rejection-remark p {
+  margin: 5px 0 0;
+}
+
 .verify-button,
 .reject-button {
   white-space: nowrap;

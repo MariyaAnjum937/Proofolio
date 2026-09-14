@@ -5,6 +5,8 @@ function FacultyDashboard() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
   const [message, setMessage] = useState("");
+  const [rejectionRemarks, setRejectionRemarks] = useState({});
+  const [rejectionErrors, setRejectionErrors] = useState({});
 
   const pendingCount = pendingAchievements.length;
 
@@ -84,15 +86,35 @@ function FacultyDashboard() {
   };
 
   const rejectAchievement = async (id) => {
+    const rejectionRemark = (rejectionRemarks[id] || "").trim();
+
+    if (!rejectionRemark) {
+      setRejectionErrors((previous) => ({
+        ...previous,
+        [id]: "Enter a reason before rejecting this certificate."
+      }));
+      setMessage("Please provide a remark before rejecting this achievement.");
+      return;
+    }
+
     try {
       setProcessingId(id);
       setMessage("");
+      setRejectionErrors((previous) => {
+        const next = { ...previous };
+        delete next[id];
+        return next;
+      });
 
       const response = await fetch(
         `http://localhost:3000/api/achievements/${id}/reject`,
         {
           method: "PATCH",
           credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ rejectionRemark })
         }
       );
 
@@ -103,6 +125,16 @@ function FacultyDashboard() {
         setPendingAchievements((previous) =>
           previous.filter((achievement) => achievement._id !== id)
         );
+        setRejectionRemarks((previous) => {
+          const next = { ...previous };
+          delete next[id];
+          return next;
+        });
+        setRejectionErrors((previous) => {
+          const next = { ...previous };
+          delete next[id];
+          return next;
+        });
         setMessage(`${rejectedTitle} was rejected successfully.`);
       } else {
         if (response.status === 401) {
@@ -191,6 +223,36 @@ function FacultyDashboard() {
                       : "Reject Achievement"}
                   </button>
                 </div>
+              </div>
+
+              <div className="rejection-remark-field">
+                <label htmlFor={`rejection-remark-${achievement._id}`}>
+                  Rejection remark
+                </label>
+                <textarea
+                  id={`rejection-remark-${achievement._id}`}
+                  value={rejectionRemarks[achievement._id] || ""}
+                  onChange={(event) =>
+                    (() => {
+                      setRejectionRemarks((previous) => ({
+                        ...previous,
+                        [achievement._id]: event.target.value
+                      }));
+                      setRejectionErrors((previous) => {
+                        const next = { ...previous };
+                        delete next[achievement._id];
+                        return next;
+                      });
+                    })()
+                  }
+                  placeholder="Explain why this certificate was rejected"
+                  rows="3"
+                  required
+                  disabled={processingId === achievement._id}
+                />
+                {rejectionErrors[achievement._id] && (
+                  <p className="field-error">{rejectionErrors[achievement._id]}</p>
+                )}
               </div>
 
               <div className="faculty-meta">
