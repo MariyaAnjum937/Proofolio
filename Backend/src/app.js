@@ -9,10 +9,17 @@ const mentoringRoutes = require('./routes/mentoring.routes');
 const cookieParser = require('cookie-parser')
 const cors = require("cors");
 
+const allowedOrigins = new Set([
+  "http://localhost:5173",
+  "https://proofolio-liart.vercel.app",
+]);
+
 //middleware
 app.use(
   cors({
-    origin: ["https://proofolio-liart.vercel.app", "http://localhost:5173"],
+    origin: (origin, callback) => {
+      callback(null, allowedOrigins.has(origin) ? origin : false);
+    },
     credentials: true,
   })
 );
