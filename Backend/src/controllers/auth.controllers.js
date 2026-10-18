@@ -7,10 +7,12 @@ const jwt = require('jsonwebtoken');
 const normalizeEmail = (value = '') => String(value).trim().toLowerCase();
 const normalizeUsername = (value = '') => String(value).trim();
 
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax'
 };
 
 const sanitizeUser = (user) => ({
