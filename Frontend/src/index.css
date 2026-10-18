@@ -679,6 +679,26 @@ button:disabled {
   border-color: #fecaca;
 }
 
+.status-badge.scheduled,
+.status-badge.rescheduled,
+.status-badge.in_progress {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.status-badge.completed {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+}
+
+.status-badge.cancelled {
+  background: #f2f4f7;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
 .empty {
   background: var(--color-surface);
   padding: 56px 24px;
@@ -1409,4 +1429,219 @@ button:disabled {
 .delete-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.mentoring-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  margin: 18px 0;
+}
+
+.mentoring-form h3,
+.mentoring-form h4,
+.mentoring-form > p,
+.mentoring-form > ul,
+.mentoring-form > div:not(.field),
+.mentoring-form > .faculty-action-buttons,
+.mentoring-form > button {
+  grid-column: 1 / -1;
+}
+
+.mentoring-form .field {
+  margin: 0;
+}
+
+.mentoring-form .field textarea {
+  min-height: 90px;
+}
+
+.mentoring-session-info {
+  margin: 18px 0;
+}
+
+.mentoring-session-info p:last-child {
+  margin-bottom: 0;
+}
+
+.mentoring-search-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mentoring-search-form .field {
+  flex: 1 1 300px;
+  margin: 0;
+}
+
+.mentoring-help-text {
+  margin-bottom: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.secondary-button {
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.pagination-controls button {
+  width: auto;
+  margin: 0;
+  padding: 8px 13px;
+}
+
+.pagination-controls button:disabled,
+.secondary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .mentoring-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+.notification-center {
+  position: relative;
+  font-size: 14px;
+}
+
+.notification-center summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.notification-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 11px;
+}
+
+.notification-panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(380px, calc(100vw - 24px));
+  max-height: 70vh;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.notification-item {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-item.unread {
+  background: #eff6ff;
+}
+
+.notification-item span {
+  line-height: 1.45;
+}
+
+.notification-item small {
+  color: var(--color-text-secondary);
+}
+
+.mentoring-tabs {
+  margin: 12px 0 18px;
+}
+
+.mentoring-mentor-grid,
+.mentoring-achievement-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.mentoring-achievement-list article,
+.student-goal {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.mentoring-achievement-list h4,
+.student-goal p {
+  margin-bottom: 8px;
+}
+
+.mentoring-session-card {
+  margin: 12px 0;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mentoring-session-card:last-child {
+  border-bottom: 0;
+}
+
+.student-action-item {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted, #f8fafc);
+}
+
+@media (max-width: 760px) {
+  .navbar-inner {
+    align-items: flex-start;
+    height: auto;
+    min-height: 72px;
+  }
+
+  .nav-links {
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .notification-panel {
+    right: -20px;
+  }
 }

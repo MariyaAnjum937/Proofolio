@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import StudentProfile from "./pages/StudentProfile";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import StudentMentoring from "./pages/StudentMentoring";
+import NotificationCenter from "./components/NotificationCenter";
 
 
 function App() {
@@ -111,6 +113,9 @@ function App() {
                 <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active" : "")}>
                   Dashboard
                 </NavLink>
+                <NavLink to="/mentoring" className={({ isActive }) => (isActive ? "active" : "")}>
+                  My Mentoring
+                </NavLink>
                 <NavLink to="/student-profile" className={({ isActive }) => (isActive ? "active" : "")}>
                   My Profile
                 </NavLink>
@@ -125,6 +130,8 @@ function App() {
                 Faculty Dashboard
               </NavLink>
             )}
+
+            {isLoggedIn && ["student", "faculty"].includes(userRole) && <NotificationCenter role={userRole} />}
 
             {isLoggedIn && userRole === "admin" && (
               <NavLink to="/admin" className={({ isActive }) => (isActive ? "active" : "")}>
@@ -180,6 +187,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["student"]}>
               <StudentProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mentoring"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <StudentMentoring />
             </ProtectedRoute>
           }
         />

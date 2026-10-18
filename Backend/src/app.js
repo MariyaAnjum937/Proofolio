@@ -3,6 +3,7 @@ const app = express();
 const authroutes = require('./routes/auth.routes');
 const achievementsroutes = require('./routes/achievements.routes');
 const roleRoutes = require('./routes/roles.routes');
+const mentoringRoutes = require('./routes/mentoring.routes');
 
 
 const cookieParser = require('cookie-parser')
@@ -21,6 +22,7 @@ app.use(
 app.use('/api', authroutes);
 app.use('/api', achievementsroutes);
 app.use('/api', roleRoutes);
+app.use('/api', mentoringRoutes);
 
 app.use((error, req, res, next) => {
   if (res.headersSent) {

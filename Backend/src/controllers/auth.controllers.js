@@ -483,7 +483,7 @@ async function updateStudentProfile(req, res) {
     const updatedProfile = await StudentProfile.findOneAndUpdate(
       { userId: req.user.id },
       { $set: profilePayload },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     const student = await userModel.findById(req.user.id).select('-password');

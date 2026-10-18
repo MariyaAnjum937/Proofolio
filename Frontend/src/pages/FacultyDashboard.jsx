@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Route, Routes, useParams } from "react-router-dom";
+import FacultyMentoring from "./FacultyMentoring";
 
 const FACULTY_API = "http://localhost:3000/api/faculty";
 const REVIEW_API = "http://localhost:3000/api/achievements";
@@ -39,6 +40,7 @@ function FacultyDashboard() {
       <nav className="faculty-nav" aria-label="Faculty dashboard">
         <NavLink to="/faculty" end>Overview</NavLink>
         <NavLink to="/faculty/students">My Students</NavLink>
+        <NavLink to="/faculty/mentoring">Mentoring</NavLink>
         <NavLink to="/faculty/student-certificates">Student Certificates</NavLink>
         <NavLink to="/faculty/my-certificates">My Certificates</NavLink>
         <NavLink to="/faculty/reviews">Certificate Reviews</NavLink>
@@ -47,6 +49,7 @@ function FacultyDashboard() {
       <Routes>
         <Route index element={<FacultyOverview />} />
         <Route path="students" element={<FacultyStudents />} />
+        <Route path="mentoring/*" element={<FacultyMentoring />} />
         <Route path="students/:studentId" element={<FacultyStudentProfile />} />
         <Route path="students/:studentId/certificates" element={<FacultyStudentCertificates />} />
         <Route path="student-certificates" element={<FacultyStudentCertificates />} />
