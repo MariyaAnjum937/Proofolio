@@ -38,7 +38,14 @@ function SignIn({ setCurrentUser }) {
           return;
         }
 
-        const authenticatedUser = { ...user, role };
+        const status = typeof user.status === "string" ? user.status.trim().toLowerCase() : "approved";
+
+        if (role === "faculty" && status !== "approved") {
+          setMessage("Your faculty account is pending admin approval.");
+          return;
+        }
+
+        const authenticatedUser = { ...user, role, status };
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("proofolioUser", JSON.stringify(authenticatedUser));
         setCurrentUser(authenticatedUser);

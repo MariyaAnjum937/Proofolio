@@ -139,11 +139,15 @@ function Dashboard() {
             <div className="achievement-card" key={achievement._id}>
               {achievement.certificateUrl && (
                 <div className="certificate-container">
-                  <img
-                    src={achievement.certificateUrl}
-                    alt={`${achievement.title} certificate`}
-                    className="certificate-image"
-                  />
+                  {achievement.certificateUrl.split("?")[0].toLowerCase().endsWith(".pdf") ? (
+                    <span>PDF certificate</span>
+                  ) : (
+                    <img
+                      src={achievement.certificateUrl}
+                      alt={`${achievement.title} certificate`}
+                      className="certificate-image"
+                    />
+                  )}
 
                   <a
                     href={achievement.certificateUrl}

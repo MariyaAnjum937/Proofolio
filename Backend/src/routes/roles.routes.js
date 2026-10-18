@@ -21,34 +21,40 @@ router.post('/role/admin',
     roleController.adminRole
 );
 
-router.get('/admin/users',
-    authMiddleware,
-    authorizeRoles("admin"),
-    roleController.getAllUsers
-);
-
 router.get('/admin/overview',
     authMiddleware,
     authorizeRoles("admin"),
     roleController.getAdminOverview
 );
 
-router.post('/admin/users',
+router.get('/admin/students',
     authMiddleware,
     authorizeRoles("admin"),
-    roleController.createUserByAdmin
+    roleController.getAdminStudents
 );
 
-router.patch('/admin/users/:id/role',
+router.get('/admin/students/:id',
     authMiddleware,
     authorizeRoles("admin"),
-    roleController.updateUserRoleByAdmin
+    roleController.getAdminStudentDetails
 );
 
-router.delete('/admin/users/:id',
+router.get('/admin/certificates',
     authMiddleware,
     authorizeRoles("admin"),
-    roleController.deleteUserByAdmin
+    roleController.getAdminCertificates
+);
+
+router.get('/admin/student-certificates',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.getAdminStudentCertificates
+);
+
+router.get('/admin/faculty-certificates',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.getAdminFacultyCertificates
 );
 
 module.exports = router;

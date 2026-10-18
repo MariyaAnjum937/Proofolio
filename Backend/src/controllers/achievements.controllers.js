@@ -1,6 +1,7 @@
 
 const achModel = require('../models/achievement.models');
-const imagekit = require("../services/imagekit.services");
+const { getImageKitClient } = require('../services/imagekit.services');
+const { withSignedCertificateUrl } = require('../services/certificate.services');
 
 
 // CREATE ACHIEVEMENT
@@ -16,33 +17,47 @@ const postAchievement = async (req, res) => {
             position
         } = req.body;
 
-        let certificateUrl = null;
-
-        if (req.file) {
-
-            const result = await imagekit.files.upload({
-                file: req.file.buffer.toString("base64"),
-                fileName: req.file.originalname,
-                folder: "/proofolio/certificates"
+        if (!req.file || !title || !type || !organization || !date || !description) {
+            return res.status(400).json({
+                message: "Title, category, organization, date, description and a certificate file are required."
             });
+        }
 
-            certificateUrl = result.url;
+        const issueDate = new Date(date);
+        if (Number.isNaN(issueDate.getTime())) {
+            return res.status(400).json({ message: "A valid certificate date is required." });
+        }
+
+        const imagekit = getImageKitClient();
+
+        const uploadResult = await imagekit.files.upload({
+            file: req.file.buffer.toString("base64"),
+            fileName: req.file.originalname,
+            folder: "/proofolio/certificates/students",
+            isPrivateFile: true
+        });
+
+        if (!uploadResult.url) {
+            return res.status(502).json({ message: "Certificate file upload failed." });
         }
 
         const achievement = await achModel.create({
             title,
             type,
             organization,
-            date,
+            date: issueDate,
             description,
             position,
-            certificateUrl,
-            user: req.user.id
+            certificateUrl: uploadResult.url,
+            certificateFileId: uploadResult.fileId || "",
+            certificateFilePath: uploadResult.filePath || "",
+            user: req.user.id,
+            ownerRole: "student"
         });
 
         res.status(201).json({
             message: "Achievement created successfully",
-            achievement
+            achievement: withSignedCertificateUrl(achievement)
         });
 
     } catch (error) {
@@ -61,13 +76,11 @@ const postAchievement = async (req, res) => {
 const displayAchievements = async (req, res) => {
     try {
 
-        const achievements = await achModel.find({
-            user: req.user.id
-        });
+        const achievements = await achModel.find({ user: req.user.id });
 
         res.status(200).json({
             message: "Achievements fetched successfully",
-            achievements
+            achievements: achievements.map((achievement) => withSignedCertificateUrl(achievement))
         });
 
     } catch (error) {
@@ -120,13 +133,14 @@ const getPendingAchievements = async (req, res) => {
 
         const achievements = await achModel
             .find({
-                verificationStatus: "pending"
+                verificationStatus: "pending",
+                $or: [{ ownerRole: "student" }, { ownerRole: { $exists: false } }]
             })
             .populate("user", "username email");
 
         res.status(200).json({
             message: "Pending achievements fetched successfully",
-            achievements
+            achievements: achievements.map((achievement) => withSignedCertificateUrl(achievement))
         });
 
     } catch (error) {
@@ -155,6 +169,12 @@ const verifyAchievement = async (req, res) => {
             });
         }
 
+        if (achievement.ownerRole === "faculty" || String(achievement.user) === String(req.user.id)) {
+            return res.status(403).json({
+                message: "Faculty may only review student-submitted certificates."
+            });
+        }
+
         if (achievement.verificationStatus === "verified") {
             return res.status(400).json({
                 message: "Achievement is already verified"
@@ -175,7 +195,7 @@ const verifyAchievement = async (req, res) => {
 
         res.status(200).json({
             message: "Achievement verified successfully",
-            achievement
+            achievement: withSignedCertificateUrl(achievement)
         });
 
     } catch (error) {
@@ -212,6 +232,12 @@ const rejectAchievement = async (req, res) => {
             });
         }
 
+        if (achievement.ownerRole === "faculty" || String(achievement.user) === String(req.user.id)) {
+            return res.status(403).json({
+                message: "Faculty may only review student-submitted certificates."
+            });
+        }
+
         if (achievement.verificationStatus === "verified") {
             return res.status(400).json({
                 message: "Achievement is already verified"
@@ -233,7 +259,7 @@ const rejectAchievement = async (req, res) => {
 
         res.status(200).json({
             message: "Achievement rejected successfully",
-            achievement
+            achievement: withSignedCertificateUrl(achievement)
         });
 
     } catch (error) {
@@ -256,4 +282,3 @@ module.exports = {
     verifyAchievement,
     rejectAchievement
 };
-

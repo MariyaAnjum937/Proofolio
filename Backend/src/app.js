@@ -22,5 +22,22 @@ app.use('/api', authroutes);
 app.use('/api', achievementsroutes);
 app.use('/api', roleRoutes);
 
+app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  if (error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ message: 'Certificate files must be 10 MB or smaller.' });
+  }
+
+  if (error.code === 'UNSUPPORTED_FILE_TYPE') {
+    return res.status(400).json({ message: error.message });
+  }
+
+  console.error('Unhandled request error:', error);
+  return res.status(500).json({ message: 'An unexpected server error occurred.' });
+});
+
 
 module.exports = app;

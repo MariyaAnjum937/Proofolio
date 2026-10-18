@@ -36,7 +36,7 @@ const achievementSchema = new mongoose.Schema(
 
     description: {
       type: String,
-      required: true,
+      default: "",
       trim: true
     },
 
@@ -50,10 +50,32 @@ const achievementSchema = new mongoose.Schema(
       required: true
     },
 
+    certificateFileId: {
+      type: String,
+      default: ""
+    },
+
+    certificateFilePath: {
+      type: String,
+      default: ""
+    },
+
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
       required: true
+    },
+
+    ownerRole: {
+      type: String,
+      enum: ["student", "faculty"],
+      default: "student",
+      index: true
+    },
+
+    expiresAt: {
+      type: Date,
+      default: null
     },
 
     verificationStatus: {
@@ -83,6 +105,9 @@ const achievementSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+achievementSchema.index({ user: 1, ownerRole: 1, createdAt: -1 });
+achievementSchema.index({ verificationStatus: 1, ownerRole: 1 });
 
 const achModel = mongoose.model("achievements", achievementSchema);
 

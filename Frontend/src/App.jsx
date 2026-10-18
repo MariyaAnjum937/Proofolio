@@ -6,6 +6,7 @@ import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import CreateAchievement from "./pages/CreateAchievement";
 import Dashboard from "./pages/Dashboard";
+import StudentProfile from "./pages/StudentProfile";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 
@@ -110,6 +111,9 @@ function App() {
                 <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active" : "")}>
                   Dashboard
                 </NavLink>
+                <NavLink to="/student-profile" className={({ isActive }) => (isActive ? "active" : "")}>
+                  My Profile
+                </NavLink>
                 <NavLink to="/create" className={({ isActive }) => (isActive ? "active" : "")}>
                   Add Achievement
                 </NavLink>
@@ -172,7 +176,16 @@ function App() {
         />
 
         <Route
-          path="/faculty"
+          path="/student-profile"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <StudentProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/faculty/*"
           element={
             <ProtectedRoute allowedRoles={["faculty"]}>
               <FacultyDashboard />
@@ -181,7 +194,7 @@ function App() {
         />
 
         <Route
-          path="/admin"
+          path="/admin/*"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <AdminDashboard />

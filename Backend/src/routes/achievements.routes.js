@@ -4,6 +4,23 @@ const achController = require('../controllers/achievements.controllers')
 const authMiddleware = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.midlleware');
 const upload = require("../middlewares/upload.middleware");
+const facultyController = require('../controllers/faculty.controllers');
+
+router.get('/faculty/students', authMiddleware, roleMiddleware("faculty"), facultyController.listStudents);
+router.get('/faculty/students/:studentId', authMiddleware, roleMiddleware("faculty"), facultyController.getStudentDetails);
+router.get('/faculty/students/:studentId/certificates', authMiddleware, roleMiddleware("faculty"), facultyController.getStudentCertificates);
+router.get('/faculty/student-certificates/:certificateId', authMiddleware, roleMiddleware("faculty"), facultyController.getStudentCertificate);
+router.get('/faculty/student-certificates', authMiddleware, roleMiddleware("faculty"), facultyController.getStudentCertificates);
+router.get('/faculty/profile', authMiddleware, roleMiddleware("faculty"), facultyController.getMyProfile);
+router.get('/faculty/my-certificates', authMiddleware, roleMiddleware("faculty"), facultyController.getMyCertificates);
+router.post(
+    '/faculty/my-certificates',
+    authMiddleware,
+    roleMiddleware("faculty"),
+    upload.single('certificate'),
+    facultyController.createMyCertificate
+);
+router.patch('/faculty/my-certificates/:certificateId', authMiddleware, roleMiddleware("faculty"), facultyController.updateMyCertificate);
 
 router.post(
     '/achievements/create',
