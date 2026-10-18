@@ -11,6 +11,7 @@ import FacultyDashboard from "./pages/FacultyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentMentoring from "./pages/StudentMentoring";
 import NotificationCenter from "./components/NotificationCenter";
+import { API_BASE_URL } from "./config/api";
 
 
 function App() {
@@ -63,7 +64,7 @@ function App() {
   const handleLogout = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3000/api/auth/sign-out",
+        `${API_BASE_URL}/api/auth/sign-out`,
         {
           method: "POST",
           credentials: "include",

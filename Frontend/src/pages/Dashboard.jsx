@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config/api";
 
 function Dashboard() {
   const [achievements, setAchievements] = useState([]);
@@ -38,7 +39,7 @@ function Dashboard() {
   const getAchievements = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3000/api/achievements/get",
+        `${API_BASE_URL}/api/achievements/get`,
         {
           method: "GET",
           credentials: "include",
@@ -72,7 +73,7 @@ function Dashboard() {
       setDeletingId(id);
 
       const response = await fetch(
-        `http://localhost:3000/api/delete/${id}`,
+        `${API_BASE_URL}/api/delete/${id}`,
         {
           method: "DELETE",
           credentials: "include",

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
-const API_ROOT = "http://localhost:3000/api/notifications";
+const API_ROOT = `${API_BASE_URL}/api/notifications`;
 
 function NotificationCenter({ role }) {
   const [items, setItems] = useState([]);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_URL } from "../config/api";
 
 function CreateAchievement() {
   const [title, setTitle] = useState("");
@@ -27,7 +28,7 @@ function CreateAchievement() {
       formData.append("certificate", certificate);
 
       const response = await fetch(
-        "http://localhost:3000/api/achievements/create",
+        `${API_BASE_URL}/api/achievements/create`,
         {
           method: "POST",
           credentials: "include",

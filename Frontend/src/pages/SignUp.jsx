@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
 const initialStudentForm = {
   fullName: "",
@@ -74,7 +75,7 @@ function SignUp() {
       const endpoint = accountType === "student" ? "/api/auth/register/student" : "/api/auth/register/faculty";
       const payload = accountType === "student" ? studentForm : facultyForm;
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

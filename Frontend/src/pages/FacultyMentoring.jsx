@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
-const API_ROOT = "http://localhost:3000/api/faculty/mentoring";
+const API_ROOT = `${API_BASE_URL}/api/faculty/mentoring`;
 const REPORT_FIELDS = [
   ["topicsDiscussed", "Topics discussed"],
   ["academicProgress", "Academic progress"],
@@ -308,7 +309,7 @@ function MentoringStudent() {
     Promise.all([
       requestJson(`${API_ROOT}/students/${studentId}`),
       requestJson(`${API_ROOT}/students/${studentId}/sessions?page=${page}&limit=20`),
-      requestJson(`http://localhost:3000/api/faculty/students/${studentId}/certificates?limit=100`)
+      requestJson(`${API_BASE_URL}/api/faculty/students/${studentId}/certificates?limit=100`)
     ])
       .then(([studentData, sessionData, certificateData]) => {
         setData(studentData);

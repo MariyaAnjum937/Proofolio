@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../config/api";
 
 function StudentProfile() {
   const [user, setUser] = useState(null);
@@ -12,7 +13,7 @@ function StudentProfile() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:3000/api/student/profile", {
+      const response = await fetch(`${API_BASE_URL}/api/student/profile`, {
         method: "GET",
         credentials: "include"
       });
@@ -69,7 +70,7 @@ function StudentProfile() {
     setMessage("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/student/profile", {
+      const response = await fetch(`${API_BASE_URL}/api/student/profile`, {
         method: "PATCH",
         credentials: "include",
         headers: {

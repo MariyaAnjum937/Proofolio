@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Route, Routes, useParams } from "react-router-dom";
 import FacultyMentoring from "./FacultyMentoring";
+import { API_BASE_URL } from "../config/api";
 
-const FACULTY_API = "http://localhost:3000/api/faculty";
-const REVIEW_API = "http://localhost:3000/api/achievements";
+const FACULTY_API = `${API_BASE_URL}/api/faculty`;
+const REVIEW_API = `${API_BASE_URL}/api/achievements`;
 const CATEGORIES = ["Hackathon", "Internship", "Certification", "Workshop", "Competition", "Extracurricular", "Project", "Other"];
 
 async function requestJson(url, options = {}) {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
 function SignIn({ setCurrentUser }) {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ function SignIn({ setCurrentUser }) {
   const signIn = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3000/api/auth/sign-in",
+        `${API_BASE_URL}/api/auth/sign-in`,
         {
           method: "POST",
           headers: {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { API_BASE_URL } from "../config/api";
 
-const API_ROOT = "http://localhost:3000/api/student/mentoring";
+const API_ROOT = `${API_BASE_URL}/api/student/mentoring`;
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, { credentials: "include", ...options });

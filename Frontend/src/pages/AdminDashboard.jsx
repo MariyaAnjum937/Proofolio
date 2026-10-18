@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Route, Routes, useParams, useSearchParams } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
-const API_ROOT = "http://localhost:3000/api/admin";
+const API_ROOT = `${API_BASE_URL}/api/admin`;
 
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, { credentials: "include", ...options });
