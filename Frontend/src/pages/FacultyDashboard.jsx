@@ -109,6 +109,18 @@ function FacultyDashboard() {
         <Route path="my-certificates" element={<MyCertificates />} />
         <Route path="reviews" element={<CertificateReviews />} />
         <Route path="profile" element={<FacultyProfile />} />
+        <Route
+          path="*"
+          element={
+            <EmptyState
+              icon="alert-triangle"
+              title="Page not found"
+              description="This page is not part of the faculty dashboard."
+              actionLabel="Faculty overview"
+              actionTo="/faculty"
+            />
+          }
+        />
       </Routes>
     </div>
   );

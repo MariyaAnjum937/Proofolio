@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import StudentMentoring from "./pages/StudentMentoring";
 import Navbar from "./components/Navbar";
 import Icon from "./components/Icons";
+import { EmptyState } from "./components/EmptyState";
 import { ThemeProvider } from "./context/ThemeContext";
 
 const getDashboardPath = (role) => {
@@ -120,6 +121,19 @@ function App() {
               <ProtectedRoute currentUser={currentUser} allowedRoles={["admin"]}>
                 <AdminDashboard />
               </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="*"
+            element={
+              <EmptyState
+                icon="alert-triangle"
+                title="Page not found"
+                description="The page you requested does not exist."
+                actionLabel="Return home"
+                actionTo="/"
+              />
             }
           />
         </Routes>

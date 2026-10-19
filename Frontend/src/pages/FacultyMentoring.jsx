@@ -73,6 +73,18 @@ function FacultyMentoring() {
         <Route path="schedule" element={<NewMentoringSession />} />
         <Route path="students/:studentId/new-session" element={<NewMentoringSession />} />
         <Route path="sessions/:sessionId" element={<MentoringSessionDetail />} />
+        <Route
+          path="*"
+          element={
+            <EmptyState
+              icon="alert-triangle"
+              title="Page not found"
+              description="This page is not part of faculty mentoring."
+              actionLabel="Mentoring overview"
+              actionTo="/faculty/mentoring"
+            />
+          }
+        />
       </Routes>
     </div>
   );

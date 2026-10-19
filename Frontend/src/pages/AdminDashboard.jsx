@@ -73,6 +73,18 @@ function AdminDashboard() {
         <Route path="certificates" element={<CertificateSectionPage />} />
         <Route path="faculty-directory" element={<FacultyDirectoryPage />} />
         <Route path="faculty" element={<FacultyApprovalsPage />} />
+        <Route
+          path="*"
+          element={
+            <EmptyState
+              icon="alert-triangle"
+              title="Page not found"
+              description="This page is not part of the admin dashboard."
+              actionLabel="Admin overview"
+              actionTo="/admin"
+            />
+          }
+        />
       </Routes>
     </div>
   );
