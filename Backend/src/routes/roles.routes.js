@@ -33,6 +33,18 @@ router.get('/admin/students',
     roleController.getAdminStudents
 );
 
+router.get('/admin/faculty',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.getAdminFaculty
+);
+
+router.patch('/admin/faculty/:id/branch',
+    authMiddleware,
+    authorizeRoles("admin"),
+    roleController.updateFacultyBranch
+);
+
 router.get('/admin/students/:id',
     authMiddleware,
     authorizeRoles("admin"),

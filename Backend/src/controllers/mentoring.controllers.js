@@ -7,6 +7,7 @@ const MentoringAssignment = require('../models/mentoringAssignment.models');
 const MentoringSession = require('../models/mentoringSession.models');
 const Notification = require('../models/notification.models');
 const { validMeetingUrl, toStudentSession } = require('../services/mentoring.service');
+const { canAccessBranch } = require('../services/branch.services');
 
 const REPORT_FIELDS = [
   'topicsDiscussed',
@@ -69,12 +70,20 @@ const requireActiveAssignment = async (facultyId, studentId) => {
   return MentoringAssignment.findOne({ faculty: facultyId, student: studentId, status: 'active' });
 };
 
-const requireSessionAccess = async (sessionId, facultyId, requireActive = false) => {
+const requireStudentBranch = async (studentId, branch) => {
+  if (!canAccessBranch(branch, branch)) return false;
+  return Boolean(await StudentProfile.exists({ userId: studentId, branch }));
+};
+
+const requireSessionAccess = async (sessionId, facultyId, branch, requireActive = false) => {
   if (!validObjectId(sessionId)) {
     return { error: { status: 400, message: 'Invalid mentoring session ID.' } };
   }
   const session = await MentoringSession.findOne({ _id: sessionId, faculty: facultyId });
   if (!session) return { error: { status: 404, message: 'Mentoring session not found.' } };
+  if (!(await requireStudentBranch(session.student, branch))) {
+    return { error: { status: 403, message: 'This student is outside your assigned branch.' } };
+  }
 
   const assignmentQuery = {
     _id: session.assignment,
@@ -114,14 +123,16 @@ const populatedSession = (query) => query
 
 const searchStudents = async (req, res) => {
   try {
+    if (req.query.branch && !canAccessBranch(req.facultyBranch, req.query.branch)) {
+      return res.status(403).json({ message: 'Faculty may only search students in their assigned branch.' });
+    }
     const { page, limit, skip } = pagination(req.query);
     const facultyProfile = await FacultyProfile.findOne({ userId: req.user._id }).select('institution').lean();
     if (!facultyProfile?.institution) {
       return res.status(403).json({ message: 'Complete your faculty institution profile before searching for mentees.' });
     }
-    const profileQuery = {};
-    profileQuery.institution = facultyProfile.institution;
-    for (const field of ['department', 'branch', 'section', 'currentAcademicYear']) {
+    const profileQuery = { institution: facultyProfile.institution, branch: req.facultyBranch };
+    for (const field of ['department', 'section', 'currentAcademicYear']) {
       if (typeof req.query[field] === 'string' && req.query[field].trim()) {
         profileQuery[field] = req.query[field].trim();
       }
@@ -189,7 +200,7 @@ const startMentoring = async (req, res) => {
     const [student, facultyProfile, studentProfile] = await Promise.all([
       User.findOne({ _id: studentId, role: 'student' }).select('_id fullName username'),
       FacultyProfile.findOne({ userId: req.user._id }).select('institution'),
-      StudentProfile.findOne({ userId: studentId }).select('institution')
+      StudentProfile.findOne({ userId: studentId, branch: req.facultyBranch }).select('institution')
     ]);
     if (!facultyProfile?.institution) {
       return res.status(403).json({ message: 'Complete your faculty institution profile before starting mentoring.' });
@@ -224,6 +235,9 @@ const endMentoring = async (req, res) => {
   try {
     const { studentId } = req.params;
     if (!validObjectId(studentId)) return res.status(400).json({ message: 'Invalid student ID.' });
+    if (!(await requireStudentBranch(studentId, req.facultyBranch))) {
+      return res.status(404).json({ message: 'Active mentoring relationship not found.' });
+    }
     const assignment = await MentoringAssignment.findOneAndUpdate(
       { student: studentId, faculty: req.user._id, status: 'active' },
       { $set: { status: 'ended', endedAt: new Date() } },
@@ -245,33 +259,39 @@ const endMentoring = async (req, res) => {
 
 const getAssignedStudents = async (req, res) => {
   try {
+    if (req.query.branch && !canAccessBranch(req.facultyBranch, req.query.branch)) {
+      return res.status(403).json({ message: 'Faculty may only access students in their assigned branch.' });
+    }
     const { page, limit, skip } = pagination(req.query);
     const assignments = await MentoringAssignment.find({ faculty: req.user._id, status: 'active' })
       .select('student assignedAt')
       .lean();
-    const studentIds = assignments.map((assignment) => assignment.student);
+    const assignedStudentIds = assignments.map((assignment) => assignment.student);
+    const profiles = await StudentProfile.find({
+      userId: { $in: assignedStudentIds },
+      branch: req.facultyBranch,
+      ...Object.fromEntries(['department', 'branch', 'section', 'currentAcademicYear'].filter((field) =>
+        field !== 'branch' && typeof req.query[field] === 'string' && req.query[field].trim()
+      ).map((field) => [field, req.query[field].trim()]))
+    }).select('userId');
+    const studentIds = profiles.map((profile) => profile.userId);
     const query = { _id: { $in: studentIds }, role: 'student' };
 
     if (typeof req.query.search === 'string' && req.query.search.trim()) {
       const search = req.query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const matcher = new RegExp(search, 'i');
-      const profileMatches = await StudentProfile.find({ $or: [{ fullName: matcher }, { rollNumber: matcher }] }).distinct('userId');
+      const profileMatches = await StudentProfile.find({
+        branch: req.facultyBranch,
+        $or: [{ fullName: matcher }, { rollNumber: matcher }]
+      }).distinct('userId');
       query.$or = [{ username: matcher }, { email: matcher }, { fullName: matcher }, { _id: { $in: profileMatches } }];
     }
 
-    const profiles = await StudentProfile.find({
-      userId: { $in: studentIds },
-      ...Object.fromEntries(['department', 'branch', 'section', 'currentAcademicYear'].filter((field) =>
-        typeof req.query[field] === 'string' && req.query[field].trim()
-      ).map((field) => [field, req.query[field].trim()]))
-    }).select('userId');
-    if (['department', 'branch', 'section', 'currentAcademicYear'].some((field) => req.query[field])) {
-      query._id = { $in: profiles.map((profile) => profile.userId) };
-    }
+    query._id = { $in: studentIds };
     if (req.query.semester !== undefined && req.query.semester !== '') {
       const semester = Number(req.query.semester);
       const semesterProfiles = Number.isInteger(semester) && semester > 0
-        ? await StudentProfile.find({ userId: query._id, currentSemester: semester }).select('userId')
+        ? await StudentProfile.find({ userId: query._id, branch: req.facultyBranch, currentSemester: semester }).select('userId')
         : [];
       query._id = { $in: semesterProfiles.map((profile) => profile.userId) };
     }
@@ -358,6 +378,8 @@ const getStudentMentoringProfile = async (req, res) => {
   try {
     const { studentId } = req.params;
     if (!validObjectId(studentId)) return res.status(400).json({ message: 'Invalid student ID.' });
+    const profile = await StudentProfile.findOne({ userId: studentId, branch: req.facultyBranch }).lean();
+    if (!profile) return res.status(404).json({ message: 'Student not found in your assigned branch.' });
     const assignment = await requireActiveAssignment(req.user._id, studentId);
     if (!assignment) return res.status(403).json({ message: 'This student is not currently assigned to you.' });
 
@@ -365,10 +387,11 @@ const getStudentMentoringProfile = async (req, res) => {
       .select('_id username email fullName phone')
       .lean();
     if (!student) return res.status(404).json({ message: 'Student not found.' });
-    const [profile, sessions] = await Promise.all([
-      StudentProfile.findOne({ userId: studentId }).lean(),
-      MentoringSession.find({ assignment: assignment._id, faculty: req.user._id, student: studentId }).sort({ scheduledAt: -1 }).lean()
-    ]);
+    const sessions = await MentoringSession.find({
+      assignment: assignment._id,
+      faculty: req.user._id,
+      student: studentId
+    }).sort({ scheduledAt: -1 }).lean();
     const now = new Date();
     const actionItems = sessions.flatMap((session) => session.actionItems.map((item) => ({
       ...(item.toObject?.() || item),
@@ -406,6 +429,9 @@ const getStudentSessions = async (req, res) => {
   try {
     const { studentId } = req.params;
     if (!validObjectId(studentId)) return res.status(400).json({ message: 'Invalid student ID.' });
+    if (!(await requireStudentBranch(studentId, req.facultyBranch))) {
+      return res.status(404).json({ message: 'Student not found in your assigned branch.' });
+    }
     const assignment = await requireActiveAssignment(req.user._id, studentId);
     if (!assignment) return res.status(403).json({ message: 'This student is not currently assigned to you.' });
     const { page, limit, skip } = pagination(req.query);
@@ -443,9 +469,15 @@ const getStudentSessions = async (req, res) => {
 const getPreviousAssignmentSessions = async (req, res) => {
   try {
     const { page, limit, skip } = pagination(req.query);
-    const endedAssignments = await MentoringAssignment.find({ faculty: req.user._id, status: 'ended' })
+    const previousAssignments = await MentoringAssignment.find({ faculty: req.user._id, status: 'ended' })
       .select('_id student assignedAt endedAt')
       .lean();
+    const allowedStudentIds = await StudentProfile.distinct('userId', {
+      userId: { $in: previousAssignments.map((assignment) => assignment.student) },
+      branch: req.facultyBranch
+    });
+    const allowedStudents = new Set(allowedStudentIds.map(String));
+    const endedAssignments = previousAssignments.filter((assignment) => allowedStudents.has(String(assignment.student)));
     const assignmentIds = endedAssignments.map((assignment) => assignment._id);
     const query = { faculty: req.user._id, assignment: { $in: assignmentIds } };
     const [total, sessions] = await Promise.all([
@@ -494,6 +526,9 @@ const createSession = async (req, res) => {
       return res.status(400).json({ message: 'A location is required for in-person sessions.' });
     }
 
+    if (!(await requireStudentBranch(studentId, req.facultyBranch))) {
+      return res.status(404).json({ message: 'Eligible student not found.' });
+    }
     const assignment = await requireActiveAssignment(req.user._id, studentId);
     if (!assignment) return res.status(403).json({ message: 'This student is not currently assigned to you.' });
     const studentExists = await User.exists({ _id: studentId, role: 'student' });
@@ -534,7 +569,7 @@ const createSession = async (req, res) => {
 
 const getSession = async (req, res) => {
   try {
-    const access = await requireSessionAccess(req.params.sessionId, req.user._id);
+    const access = await requireSessionAccess(req.params.sessionId, req.user._id, req.facultyBranch);
     if (access.error) return res.status(access.error.status).json({ message: access.error.message });
     const session = await populatedSession(MentoringSession.findById(access.session._id)).lean();
     return res.status(200).json({ session: { ...session, canManage: access.assignment.status === 'active' } });
@@ -545,7 +580,7 @@ const getSession = async (req, res) => {
 
 const updateSession = async (req, res) => {
   try {
-    const access = await requireSessionAccess(req.params.sessionId, req.user._id, true);
+    const access = await requireSessionAccess(req.params.sessionId, req.user._id, req.facultyBranch, true);
     if (access.error) return res.status(access.error.status).json({ message: access.error.message });
     const session = access.session;
     const previousScheduleDetails = {
@@ -642,7 +677,7 @@ const updateSession = async (req, res) => {
 
 const updateSessionReport = async (req, res) => {
   try {
-    const access = await requireSessionAccess(req.params.sessionId, req.user._id, true);
+    const access = await requireSessionAccess(req.params.sessionId, req.user._id, req.facultyBranch, true);
     if (access.error) return res.status(access.error.status).json({ message: access.error.message });
     const session = access.session;
     if (session.status === 'cancelled') return res.status(409).json({ message: 'Cancelled sessions cannot receive reports.' });
@@ -734,7 +769,7 @@ const updateSessionReport = async (req, res) => {
 
 const cancelSession = async (req, res) => {
   try {
-    const access = await requireSessionAccess(req.params.sessionId, req.user._id, true);
+    const access = await requireSessionAccess(req.params.sessionId, req.user._id, req.facultyBranch, true);
     if (access.error) return res.status(access.error.status).json({ message: access.error.message });
     const session = access.session;
     if (!['scheduled', 'rescheduled'].includes(session.status)) {
@@ -764,7 +799,7 @@ const cancelSession = async (req, res) => {
 
 const updateActionItem = async (req, res) => {
   try {
-    const access = await requireSessionAccess(req.params.sessionId, req.user._id, true);
+    const access = await requireSessionAccess(req.params.sessionId, req.user._id, req.facultyBranch, true);
     if (access.error) return res.status(access.error.status).json({ message: access.error.message });
     const session = access.session;
     if (!validObjectId(req.params.actionItemId)) return res.status(400).json({ message: 'Invalid action item ID.' });
@@ -817,7 +852,7 @@ const updateActionItem = async (req, res) => {
 
 const createGoal = async (req, res) => {
   try {
-    const access = await requireSessionAccess(req.params.sessionId, req.user._id, true);
+    const access = await requireSessionAccess(req.params.sessionId, req.user._id, req.facultyBranch, true);
     if (access.error) return res.status(access.error.status).json({ message: access.error.message });
     const { title, description = '', targetDate = null, timeframe = 'short_term', shareWithStudent = false } = req.body || {};
     if (typeof title !== 'string' || !title.trim() || title.trim().length > 200) {
@@ -857,7 +892,7 @@ const createGoal = async (req, res) => {
 
 const updateGoal = async (req, res) => {
   try {
-    const access = await requireSessionAccess(req.params.sessionId, req.user._id, true);
+    const access = await requireSessionAccess(req.params.sessionId, req.user._id, req.facultyBranch, true);
     if (access.error) return res.status(access.error.status).json({ message: access.error.message });
     if (!validObjectId(req.params.goalId)) return res.status(400).json({ message: 'Invalid goal ID.' });
     const goal = access.session.goals.id(req.params.goalId);

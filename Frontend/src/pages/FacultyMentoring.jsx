@@ -51,7 +51,6 @@ function AssignedStudents() {
   const [filters, setFilters] = useState({ departments: [], branches: [], sections: [], academicYears: [], semesters: [] });
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("");
-  const [branch, setBranch] = useState("");
   const [section, setSection] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [semester, setSemester] = useState("");
@@ -67,7 +66,6 @@ function AssignedStudents() {
     const query = new URLSearchParams({ page: String(page), limit: "20" });
     if (search.trim()) query.set("search", search.trim());
     if (department) query.set("department", department);
-    if (branch) query.set("branch", branch);
     if (section) query.set("section", section);
     if (academicYear) query.set("currentAcademicYear", academicYear);
     if (semester) query.set("semester", semester);
@@ -81,7 +79,7 @@ function AssignedStudents() {
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
-  }, [page, search, department, branch, section, academicYear, semester, refresh]);
+  }, [page, search, department, section, academicYear, semester, refresh]);
 
   const endMentoring = async (student) => {
     const name = student.profile?.fullName || student.fullName || student.username;
@@ -113,7 +111,6 @@ function AssignedStudents() {
       <div className="admin-filters">
         <div className="field"><label htmlFor="mentoring-search">Search name, roll number, or email</label><input id="mentoring-search" value={search} onChange={update(setSearch)} placeholder="Search my mentees" /></div>
         <Filter id="mentoring-department" label="Department" value={department} options={filters.departments} onChange={update(setDepartment)} />
-        <Filter id="mentoring-branch" label="Branch" value={branch} options={filters.branches} onChange={update(setBranch)} />
         <Filter id="mentoring-section" label="Section" value={section} options={filters.sections} onChange={update(setSection)} />
         <Filter id="mentoring-year" label="Academic year" value={academicYear} options={filters.academicYears} onChange={update(setAcademicYear)} />
         <Filter id="mentoring-semester" label="Semester" value={semester} options={filters.semesters} onChange={update(setSemester)} />
@@ -198,7 +195,6 @@ function FindStudents() {
   const [filters, setFilters] = useState({ departments: [], branches: [], sections: [], academicYears: [], semesters: [] });
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("");
-  const [branch, setBranch] = useState("");
   const [section, setSection] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [semester, setSemester] = useState("");
@@ -214,7 +210,6 @@ function FindStudents() {
     const query = new URLSearchParams({ page: String(page), limit: "20" });
     if (search.trim()) query.set("search", search.trim());
     if (department) query.set("department", department);
-    if (branch) query.set("branch", branch);
     if (section) query.set("section", section);
     if (academicYear) query.set("currentAcademicYear", academicYear);
     if (semester) query.set("semester", semester);
@@ -228,7 +223,7 @@ function FindStudents() {
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
-  }, [page, search, department, branch, section, academicYear, semester, refresh]);
+  }, [page, search, department, section, academicYear, semester, refresh]);
 
   const update = (setter) => (event) => {
     setter(event.target.value);
@@ -252,11 +247,10 @@ function FindStudents() {
 
   return (
     <section className="admin-users-panel">
-      <div className="admin-section-heading"><div><h2>Find students</h2><p>Search registered students in your institution and start mentoring independently. Students can have more than one faculty mentor.</p></div></div>
+      <div className="admin-section-heading"><div><h2>Find students</h2><p>Search registered students in your assigned branch and start mentoring independently. Students can have more than one faculty mentor.</p></div></div>
       <div className="admin-filters">
         <div className="field"><label htmlFor="mentoring-search-students">Search name, roll number, or email</label><input id="mentoring-search-students" value={search} onChange={update(setSearch)} placeholder="Find students" /></div>
         <Filter id="find-department" label="Department" value={department} options={filters.departments} onChange={update(setDepartment)} />
-        <Filter id="find-branch" label="Branch" value={branch} options={filters.branches} onChange={update(setBranch)} />
         <Filter id="find-section" label="Section" value={section} options={filters.sections} onChange={update(setSection)} />
         <Filter id="find-year" label="Academic year" value={academicYear} options={filters.academicYears} onChange={update(setAcademicYear)} />
         <Filter id="find-semester" label="Semester" value={semester} options={filters.semesters} onChange={update(setSemester)} />

@@ -4,6 +4,8 @@ const StudentProfile = require('../models/studentProfile.models');
 const FacultyProfile = require('../models/facultyProfile.models');
 const Achievement = require('../models/achievement.models');
 const { withSignedCertificateUrl } = require('../services/certificate.services');
+const { BRANCHES, isValidBranch } = require('../services/branch.services');
+const CERTIFICATE_CATEGORIES = ['Hackathon', 'Internship', 'Certification', 'Workshop', 'Competition', 'Extracurricular', 'Project', 'Other'];
 
 const studentRole = (req, res) => {
     res.status(201).json({ message: 'welcome student' });
@@ -31,6 +33,16 @@ const getPagination = (query) => {
 };
 
 const getStudentDirectoryPipeline = (query) => {
+    const certificateMatch = {
+        $expr: { $eq: ['$user', '$$studentId'] },
+        $or: [{ ownerRole: 'student' }, { ownerRole: { $exists: false } }]
+    };
+    if (['pending', 'verified', 'rejected'].includes(query.certificateStatus)) {
+        certificateMatch.verificationStatus = query.certificateStatus;
+    }
+    if (CERTIFICATE_CATEGORIES.includes(query.certificateType)) {
+        certificateMatch.type = query.certificateType;
+    }
     const pipeline = [
         { $match: { role: 'student' } },
         {
@@ -47,7 +59,7 @@ const getStudentDirectoryPipeline = (query) => {
                 from: Achievement.collection.name,
                 let: { studentId: '$_id' },
                 pipeline: [
-                    { $match: { $expr: { $eq: ['$user', '$$studentId'] } } },
+                    { $match: certificateMatch },
                     { $count: 'count' }
                 ],
                 as: 'achievementCount'
@@ -85,6 +97,10 @@ const getStudentDirectoryPipeline = (query) => {
             { fullName: search },
             { 'profile.rollNumber': search }
         ];
+    }
+
+    if (query.certificateStatus || query.certificateType) {
+        filters.certificateCount = { $gt: 0 };
     }
 
     if (Object.keys(filters).length) {
@@ -192,6 +208,12 @@ const getAdminOverview = async (req, res) => {
 
 const getAdminStudents = async (req, res) => {
     try {
+        if (req.query.certificateStatus && !['pending', 'verified', 'rejected'].includes(req.query.certificateStatus)) {
+            return res.status(400).json({ message: 'Invalid certificate status.' });
+        }
+        if (req.query.certificateType && !CERTIFICATE_CATEGORIES.includes(req.query.certificateType)) {
+            return res.status(400).json({ message: 'Invalid certificate category.' });
+        }
         const { page, limit, skip } = getPagination(req.query);
         const sortFields = {
             name: 'fullName',
@@ -246,6 +268,118 @@ const getAdminStudents = async (req, res) => {
         });
     } catch (error) {
         return res.status(500).json({ message: 'Failed to fetch students.', error: error.message });
+    }
+};
+
+const getAdminFaculty = async (req, res) => {
+    try {
+        const { page, limit, skip } = getPagination(req.query);
+        const pipeline = [
+            { $match: { role: 'faculty' } },
+            {
+                $lookup: {
+                    from: FacultyProfile.collection.name,
+                    localField: '_id',
+                    foreignField: 'userId',
+                    as: 'profile'
+                }
+            },
+            { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } }
+        ];
+
+        if (typeof req.query.branch === 'string' && req.query.branch.trim()) {
+            if (!isValidBranch(req.query.branch)) {
+                return res.status(400).json({ message: 'Select a valid faculty branch.' });
+            }
+            pipeline.push({ $match: { 'profile.branch': req.query.branch.trim() } });
+        }
+
+        if (typeof req.query.search === 'string' && req.query.search.trim()) {
+            const search = new RegExp(escapeRegex(req.query.search.trim()), 'i');
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { username: search },
+                        { email: search },
+                        { fullName: search },
+                        { 'profile.fullName': search },
+                        { 'profile.employeeId': search },
+                        { 'profile.department': search },
+                        { 'profile.designation': search }
+                    ]
+                }
+            });
+        }
+
+        const [countResult, faculty] = await Promise.all([
+            User.aggregate([...pipeline, { $count: 'total' }]),
+            User.aggregate([
+                ...pipeline,
+                { $sort: { 'profile.fullName': 1, _id: 1 } },
+                { $skip: skip },
+                { $limit: limit },
+                {
+                    $project: {
+                        _id: 1,
+                        username: 1,
+                        email: 1,
+                        fullName: 1,
+                        status: 1,
+                        profile: {
+                            fullName: '$profile.fullName',
+                            institution: '$profile.institution',
+                            employeeId: '$profile.employeeId',
+                            department: '$profile.department',
+                            branch: '$profile.branch',
+                            designation: '$profile.designation',
+                            specialization: '$profile.specialization',
+                            experienceYears: '$profile.experienceYears'
+                        }
+                    }
+                }
+            ])
+        ]);
+        const total = countResult[0]?.total || 0;
+        return res.status(200).json({
+            message: 'Faculty directory fetched successfully.',
+            faculty,
+            branches: BRANCHES,
+            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Failed to fetch faculty directory.', error: error.message });
+    }
+};
+
+const updateFacultyBranch = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { branch } = req.body || {};
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid faculty ID.' });
+        }
+        if (branch !== '' && branch !== null && !isValidBranch(branch)) {
+            return res.status(400).json({ message: 'Select a valid faculty branch or clear the assignment.' });
+        }
+
+        const faculty = await User.findOne({ _id: id, role: 'faculty' }).select('_id');
+        if (!faculty) return res.status(404).json({ message: 'Faculty member not found.' });
+
+        const profile = await FacultyProfile.findOneAndUpdate(
+            { userId: faculty._id },
+            { $set: { branch: branch || '' } },
+            { returnDocument: 'after', runValidators: true }
+        ).select('fullName branch department designation');
+        if (!profile) return res.status(404).json({ message: 'Faculty profile not found.' });
+
+        return res.status(200).json({
+            message: profile.branch
+                ? `Faculty branch assigned to ${profile.branch}.`
+                : 'Faculty branch assignment cleared.',
+            profile
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Failed to update faculty branch.', error: error.message });
     }
 };
 
@@ -373,6 +507,9 @@ const getAdminCertificates = async (req, res) => {
         if (typeof req.query.department === 'string' && req.query.department.trim()) {
             filters['ownerProfile.department'] = req.query.department.trim();
         }
+        if (typeof req.query.branch === 'string' && req.query.branch.trim()) {
+            filters['ownerProfile.branch'] = req.query.branch.trim();
+        }
         if (typeof req.query.type === 'string' && req.query.type.trim()) {
             filters.type = req.query.type.trim();
         }
@@ -449,6 +586,7 @@ const getAdminCertificates = async (req, res) => {
                             department: '$ownerProfile.department',
                             designation: '$ownerProfile.designation',
                             employeeId: '$ownerProfile.employeeId',
+                            branch: '$ownerProfile.branch',
                             institution: '$ownerProfile.institution'
                         }
                     }
@@ -492,6 +630,8 @@ module.exports = {
     adminRole,
     getAdminOverview,
     getAdminStudents,
+    getAdminFaculty,
+    updateFacultyBranch,
     getAdminStudentDetails,
     getAdminCertificates,
     getAdminStudentCertificates,

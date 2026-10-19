@@ -1,7 +1,11 @@
 
 const achModel = require('../models/achievement.models');
+const mongoose = require('mongoose');
+const User = require('../models/user.models');
+const StudentProfile = require('../models/studentProfile.models');
 const { getImageKitClient } = require('../services/imagekit.services');
 const { withSignedCertificateUrl } = require('../services/certificate.services');
+const { canAccessBranch } = require('../services/branch.services');
 
 
 // CREATE ACHIEVEMENT
@@ -130,13 +134,19 @@ const deleteAchievement = async (req, res) => {
 // GET PENDING ACHIEVEMENTS FOR FACULTY
 const getPendingAchievements = async (req, res) => {
     try {
-
+        const profiles = await StudentProfile.find({ branch: req.facultyBranch }).select('userId').lean();
+        const users = await User.find({
+            _id: { $in: profiles.map((profile) => profile.userId) },
+            role: 'student'
+        }).select('_id').lean();
+        const studentIds = users.map((user) => user._id);
         const achievements = await achModel
             .find({
                 verificationStatus: "pending",
+                user: { $in: studentIds },
                 $or: [{ ownerRole: "student" }, { ownerRole: { $exists: false } }]
             })
-            .populate("user", "username email");
+            .populate("user", "username email fullName");
 
         res.status(200).json({
             message: "Pending achievements fetched successfully",
@@ -154,12 +164,23 @@ const getPendingAchievements = async (req, res) => {
     }
 };
 
+const isReviewableStudentAchievement = async (achievement, branch) => {
+    if (!mongoose.isValidObjectId(achievement.user)) return false;
+    const student = await User.findOne({ _id: achievement.user, role: "student" }).select("_id").lean();
+    if (!student) return false;
+    const profile = await StudentProfile.findOne({ userId: student._id }).select("branch").lean();
+    return canAccessBranch(branch, profile?.branch);
+};
+
 
 // VERIFY ACHIEVEMENT
 const verifyAchievement = async (req, res) => {
     try {
 
         const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: "Invalid certificate ID." });
+        }
 
         const achievement = await achModel.findById(id);
 
@@ -169,9 +190,13 @@ const verifyAchievement = async (req, res) => {
             });
         }
 
-        if (achievement.ownerRole === "faculty" || String(achievement.user) === String(req.user.id)) {
+        if (
+            achievement.ownerRole === "faculty" ||
+            String(achievement.user) === String(req.user.id) ||
+            !(await isReviewableStudentAchievement(achievement, req.facultyBranch))
+        ) {
             return res.status(403).json({
-                message: "Faculty may only review student-submitted certificates."
+                message: "Faculty may only review certificates belonging to students in their assigned branch."
             });
         }
 
@@ -213,6 +238,9 @@ const rejectAchievement = async (req, res) => {
     try {
 
         const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: "Invalid certificate ID." });
+        }
         const requestBody = req.body || {};
         const rejectionRemark = typeof requestBody.rejectionRemark === "string"
             ? requestBody.rejectionRemark.trim()
@@ -232,9 +260,13 @@ const rejectAchievement = async (req, res) => {
             });
         }
 
-        if (achievement.ownerRole === "faculty" || String(achievement.user) === String(req.user.id)) {
+        if (
+            achievement.ownerRole === "faculty" ||
+            String(achievement.user) === String(req.user.id) ||
+            !(await isReviewableStudentAchievement(achievement, req.facultyBranch))
+        ) {
             return res.status(403).json({
-                message: "Faculty may only review student-submitted certificates."
+                message: "Faculty may only review certificates belonging to students in their assigned branch."
             });
         }
 

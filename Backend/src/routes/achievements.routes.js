@@ -5,12 +5,13 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.midlleware');
 const upload = require("../middlewares/upload.middleware");
 const facultyController = require('../controllers/faculty.controllers');
+const requireFacultyBranch = require('../middlewares/facultyBranch.middleware');
 
-router.get('/faculty/students', authMiddleware, roleMiddleware("faculty"), facultyController.listStudents);
-router.get('/faculty/students/:studentId', authMiddleware, roleMiddleware("faculty"), facultyController.getStudentDetails);
-router.get('/faculty/students/:studentId/certificates', authMiddleware, roleMiddleware("faculty"), facultyController.getStudentCertificates);
-router.get('/faculty/student-certificates/:certificateId', authMiddleware, roleMiddleware("faculty"), facultyController.getStudentCertificate);
-router.get('/faculty/student-certificates', authMiddleware, roleMiddleware("faculty"), facultyController.getStudentCertificates);
+router.get('/faculty/students', authMiddleware, roleMiddleware("faculty"), requireFacultyBranch, facultyController.listStudents);
+router.get('/faculty/students/:studentId', authMiddleware, roleMiddleware("faculty"), requireFacultyBranch, facultyController.getStudentDetails);
+router.get('/faculty/students/:studentId/certificates', authMiddleware, roleMiddleware("faculty"), requireFacultyBranch, facultyController.getStudentCertificates);
+router.get('/faculty/student-certificates/:certificateId', authMiddleware, roleMiddleware("faculty"), requireFacultyBranch, facultyController.getStudentCertificate);
+router.get('/faculty/student-certificates', authMiddleware, roleMiddleware("faculty"), requireFacultyBranch, facultyController.getStudentCertificates);
 router.get('/faculty/profile', authMiddleware, roleMiddleware("faculty"), facultyController.getMyProfile);
 router.get('/faculty/my-certificates', authMiddleware, roleMiddleware("faculty"), facultyController.getMyCertificates);
 router.post(
@@ -44,18 +45,21 @@ router.delete("/delete/:id",
 router.get( "/achievements/pending", 
     authMiddleware, 
     roleMiddleware("faculty"), 
+    requireFacultyBranch,
     achController.getPendingAchievements
 );
 
 router.patch( "/achievements/:id/verify", 
     authMiddleware, 
     roleMiddleware("faculty"), 
+    requireFacultyBranch,
     achController.verifyAchievement
 );
 
 router.patch( "/achievements/:id/reject", 
     authMiddleware, 
     roleMiddleware("faculty"), 
+    requireFacultyBranch,
     achController.rejectAchievement
 );
 

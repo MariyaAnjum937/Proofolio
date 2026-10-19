@@ -53,7 +53,7 @@ function FacultyDashboard() {
         <Route path="mentoring/*" element={<FacultyMentoring />} />
         <Route path="students/:studentId" element={<FacultyStudentProfile />} />
         <Route path="students/:studentId/certificates" element={<FacultyStudentCertificates />} />
-        <Route path="student-certificates" element={<FacultyStudentCertificates />} />
+        <Route path="student-certificates" element={<FacultyStudents certificateDirectory />} />
         <Route path="student-certificates/:certificateId" element={<FacultyCertificateDetail />} />
         <Route path="my-certificates" element={<MyCertificates />} />
         <Route path="reviews" element={<CertificateReviews />} />
@@ -98,7 +98,7 @@ function FacultyOverview() {
       </div>
       <section className="faculty-card">
         <h2>Faculty tools</h2>
-        <p>Student directory access follows the current institution-wide faculty review policy. Faculty members can browse student profiles and achievements, review student certificate submissions, and maintain their own professional certificate collection.</p>
+        <p>Student profiles, certificate directories, and review actions are limited to students in your administrator-assigned branch. You can also maintain your own professional certificate collection.</p>
         <div className="faculty-action-buttons">
           <Link className="verify-button faculty-link-button" to="/faculty/students">Browse students</Link>
           <Link className="verify-button faculty-link-button" to="/faculty/student-certificates">Browse student certificates</Link>
@@ -108,12 +108,11 @@ function FacultyOverview() {
   );
 }
 
-function FacultyStudents() {
+function FacultyStudents({ certificateDirectory = false }) {
   const [students, setStudents] = useState([]);
   const [filters, setFilters] = useState({ departments: [], branches: [], sections: [], academicYears: [], semesters: [] });
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("");
-  const [branch, setBranch] = useState("");
   const [section, setSection] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [semester, setSemester] = useState("");
@@ -126,7 +125,6 @@ function FacultyStudents() {
     const query = new URLSearchParams({ page: String(page), limit: "20" });
     if (search.trim()) query.set("search", search.trim());
     if (department) query.set("department", department);
-    if (branch) query.set("branch", branch);
     if (section) query.set("section", section);
     if (academicYear) query.set("currentAcademicYear", academicYear);
     if (semester) query.set("semester", semester);
@@ -134,13 +132,13 @@ function FacultyStudents() {
     requestJson(`${FACULTY_API}/students?${query}`)
       .then((data) => {
         setStudents(data.students || []);
-        setFilters(data.filters || filters);
+        setFilters(data.filters || { departments: [], branches: [], sections: [], academicYears: [], semesters: [] });
         setPagination(data.pagination || { total: 0, totalPages: 0 });
         setError("");
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
-  }, [page, search, department, branch, section, academicYear, semester]);
+  }, [page, search, department, section, academicYear, semester]);
 
   const change = (setter) => (event) => {
     setter(event.target.value);
@@ -149,11 +147,10 @@ function FacultyStudents() {
 
   return (
     <section className="admin-users-panel">
-      <div className="admin-section-heading"><div><h2>My Students</h2><p>{pagination.total} students in the current directory scope.</p></div></div>
+      <div className="admin-section-heading"><div><h2>{certificateDirectory ? "Student Certificate Directory" : "My Students"}</h2><p>{pagination.total} students in your assigned branch{certificateDirectory ? " · select a student to view their certificates" : "."}</p></div></div>
       <div className="admin-filters">
         <div className="field"><label htmlFor="faculty-student-search">Search name, roll number, or email</label><input id="faculty-student-search" value={search} onChange={change(setSearch)} placeholder="Search students" /></div>
         <Filter id="faculty-department" label="Department" value={department} options={filters.departments} onChange={change(setDepartment)} />
-        <Filter id="faculty-branch" label="Branch" value={branch} options={filters.branches} onChange={change(setBranch)} />
         <Filter id="faculty-section" label="Section" value={section} options={filters.sections} onChange={change(setSection)} />
         <Filter id="faculty-year" label="Academic year" value={academicYear} options={filters.academicYears} onChange={change(setAcademicYear)} />
         <Filter id="faculty-semester" label="Semester" value={semester} options={filters.semesters} onChange={change(setSemester)} />
@@ -179,7 +176,7 @@ function FacultyStudents() {
                     <td>{student.certificateCount ?? 0}</td>
                     <td>{student.verifiedCertificateCount ?? 0}</td>
                     <td className="admin-table-actions">
-                      <Link to={`/faculty/students/${student._id}`}>Profile</Link>
+                      {!certificateDirectory && <Link to={`/faculty/students/${student._id}`}>Profile</Link>}
                       <Link to={`/faculty/students/${student._id}/certificates`}>Certificates</Link>
                     </td>
                   </tr>
@@ -259,14 +256,19 @@ function DetailGroup({ title, items }) {
 function FacultyStudentCertificates() {
   const { studentId } = useParams();
   const [certificates, setCertificates] = useState([]);
+  const [student, setStudent] = useState(null);
+  const [remarks, setRemarks] = useState({});
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("");
   const [type, setType] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [status, setStatus] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
     const query = new URLSearchParams({ page: String(page), limit: "20" });
@@ -276,43 +278,88 @@ function FacultyStudentCertificates() {
     if (type) query.set("type", type);
     if (academicYear) query.set("academicYear", academicYear);
     if (status) query.set("status", status);
+    if (sortOrder) query.set("sortOrder", sortOrder);
     setLoading(true);
-    requestJson(`${FACULTY_API}/student-certificates?${query}`)
-      .then((data) => {
+    Promise.all([
+      requestJson(`${FACULTY_API}/students/${studentId}`),
+      requestJson(`${FACULTY_API}/student-certificates?${query}`)
+    ])
+      .then(([studentData, data]) => {
+        setStudent(studentData.student);
         setCertificates(data.certificates || []);
         setPagination(data.pagination || { total: 0, totalPages: 0 });
         setError("");
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
-  }, [studentId, search, department, type, academicYear, status, page]);
+  }, [studentId, search, department, type, academicYear, status, sortOrder, page]);
   const change = (setter) => (event) => { setter(event.target.value); setPage(1); };
+  const decide = async (certificate, decision) => {
+    const remark = (remarks[certificate._id] || "").trim();
+    if (decision === "reject" && !remark) {
+      setError("Enter a reason before rejecting a certificate.");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to ${decision} "${certificate.title}"?`)) return;
+    setProcessingId(certificate._id);
+    setMessage("");
+    setError("");
+    try {
+      const options = { method: "PATCH" };
+      if (decision === "reject") {
+        options.headers = { "Content-Type": "application/json" };
+        options.body = JSON.stringify({ rejectionRemark: remark });
+      }
+      const data = await requestJson(`${REVIEW_API}/${certificate._id}/${decision}`, options);
+      setMessage(data.message || `Certificate ${decision}d.`);
+      setCertificates((current) => current.map((item) => item._id === certificate._id
+        ? { ...item, verificationStatus: decision === "verify" ? "verified" : "rejected", rejectionRemark: remark }
+        : item));
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
   return (
     <section className="admin-users-panel">
-      <div className="admin-section-heading"><div><h2>{studentId ? "Student Certificates" : "Student Certificates"}</h2><p>{pagination.total} student achievement submissions</p></div>{studentId && <Link className="text-action" to={`/faculty/students/${studentId}`}>← Student profile</Link>}</div>
+      <div className="admin-section-heading">
+        <div><h2>{student?.profile?.fullName || student?.fullName || student?.username || "Student"} · Certificates</h2><p>{pagination.total} certificates · {student?.profile?.rollNumber || "Roll number unavailable"}</p></div>
+        <Link className="text-action" to="/faculty/student-certificates">← Back to student directory</Link>
+      </div>
       <div className="admin-filters">
         <div className="field"><label htmlFor="faculty-certificate-search">Search student, roll number, or title</label><input id="faculty-certificate-search" value={search} onChange={change(setSearch)} placeholder="Search certificates" /></div>
         <div className="field"><label htmlFor="faculty-certificate-department">Department</label><input id="faculty-certificate-department" value={department} onChange={change(setDepartment)} placeholder="All departments" /></div>
         <Filter id="faculty-certificate-type" label="Category" value={type} options={CATEGORIES} onChange={change(setType)} />
         <div className="field"><label htmlFor="faculty-academic-year">Academic year</label><input id="faculty-academic-year" value={academicYear} onChange={change(setAcademicYear)} placeholder="All years" /></div>
         <Filter id="faculty-certificate-status" label="Verification" value={status} options={["pending", "verified", "rejected"]} onChange={change(setStatus)} />
+        <div className="field"><label htmlFor="faculty-certificate-sort">Submission date</label><select id="faculty-certificate-sort" value={sortOrder} onChange={change(setSortOrder)}><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></div>
       </div>
+      {message && <p className="message">{message}</p>}
       {error && <p className="message error-message">{error}</p>}
       {loading ? <div className="empty"><h3>Loading student certificates...</h3></div> : certificates.length === 0 ? (
         <div className="empty"><h3>No certificates match these filters.</h3></div>
       ) : (
         <>
           <div className="admin-table-wrap"><table className="admin-table">
-            <thead><tr><th>Title</th><th>Student</th><th>Roll number</th><th>Department</th><th>Category</th><th>Organization</th><th>Achievement date</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Title</th><th>Roll number</th><th>Department</th><th>Category</th><th>Organization</th><th>Achievement date</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>{certificates.map((certificate) => (
               <tr key={certificate._id}>
-                <td>{certificate.title}</td><td>{certificate.profile?.fullName || certificate.student?.fullName || certificate.student?.username}</td>
-                <td>{certificate.profile?.rollNumber || "—"}</td><td>{certificate.profile?.department || "—"}</td>
+                <td>{certificate.title}</td><td>{certificate.profile?.rollNumber || "—"}</td><td>{certificate.profile?.department || "—"}</td>
                 <td>{certificate.type}</td><td>{certificate.organization}</td>
                 <td>{certificate.date ? new Date(certificate.date).toLocaleDateString() : "—"}</td>
                 <td>{certificate.createdAt ? new Date(certificate.createdAt).toLocaleDateString() : "—"}</td>
                 <td><span className={`status-badge ${certificate.verificationStatus || "pending"}`}>{certificate.verificationStatus || "pending"}</span></td>
-                <td className="admin-table-actions"><Link to={`/faculty/students/${certificate.student?._id}`}>Student</Link><Link to={`/faculty/student-certificates/${certificate._id}`}>View</Link></td>
+                <td className="admin-table-actions">
+                  <Link to={`/faculty/student-certificates/${certificate._id}`}>View</Link>
+                  {certificate.verificationStatus === "pending" && (
+                    <>
+                      <input aria-label={`Rejection reason for ${certificate.title}`} placeholder="Rejection reason" value={remarks[certificate._id] || ""} onChange={(event) => setRemarks((previous) => ({ ...previous, [certificate._id]: event.target.value }))} />
+                      <button className="verify-button" type="button" disabled={processingId === certificate._id} onClick={() => decide(certificate, "verify")}>Approve</button>
+                      <button className="reject-button" type="button" disabled={processingId === certificate._id} onClick={() => decide(certificate, "reject")}>Reject</button>
+                    </>
+                  )}
+                </td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -588,7 +635,7 @@ function FacultyProfile() {
       <div className="admin-section-heading"><div><h2>My Profile</h2><p>Professional profile information.</p></div><span className="status-badge verified">{user?.status || "approved"}</span></div>
       <div className="admin-detail-grid">
         <DetailGroup title="Personal Information" items={[["Full name", profile?.fullName || user?.fullName], ["Username", user?.username], ["Official email", user?.email], ["Phone", profile?.phone || user?.phone]]} />
-        <DetailGroup title="Professional Information" items={[["Institution", profile?.institution], ["Employee ID", profile?.employeeId], ["Department", profile?.department], ["Designation", profile?.designation], ["Specialization", profile?.specialization], ["Years of experience", profile?.experienceYears]]} />
+        <DetailGroup title="Professional Information" items={[["Institution", profile?.institution], ["Employee ID", profile?.employeeId], ["Department", profile?.department], ["Assigned branch", profile?.branch || "Not assigned"], ["Designation", profile?.designation], ["Specialization", profile?.specialization], ["Years of experience", profile?.experienceYears]]} />
       </div>
     </section>
   );

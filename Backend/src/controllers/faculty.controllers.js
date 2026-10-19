@@ -5,6 +5,7 @@ const FacultyProfile = require('../models/facultyProfile.models');
 const Achievement = require('../models/achievement.models');
 const { getImageKitClient } = require('../services/imagekit.services');
 const { withSignedCertificateUrl } = require('../services/certificate.services');
+const { canAccessBranch } = require('../services/branch.services');
 
 const categories = ['Hackathon', 'Internship', 'Certification', 'Workshop', 'Competition', 'Extracurricular', 'Project', 'Other'];
 
@@ -18,7 +19,7 @@ const pagination = (query) => {
 
 const safeRegex = (value) => new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
-const makeStudentPipeline = (query = {}) => {
+const makeStudentPipeline = (query = {}, assignedBranch) => {
   const pipeline = [
     { $match: { role: 'student' } },
     {
@@ -84,14 +85,18 @@ const makeStudentPipeline = (query = {}) => {
       { 'profile.rollNumber': match }
     ];
   }
+  if (assignedBranch) filters['profile.branch'] = assignedBranch;
   if (Object.keys(filters).length) pipeline.push({ $match: filters });
   return pipeline;
 };
 
 const listStudents = async (req, res) => {
   try {
+    if (req.query.branch && !canAccessBranch(req.facultyBranch, req.query.branch)) {
+      return res.status(403).json({ message: 'Faculty may only access students in their assigned branch.' });
+    }
     const { page, limit, skip } = pagination(req.query);
-    const pipeline = makeStudentPipeline(req.query);
+    const pipeline = makeStudentPipeline(req.query, req.facultyBranch);
     const [totalResult, students, departments, branches, sections, academicYears, semesters] = await Promise.all([
       User.aggregate([...pipeline, { $count: 'total' }]),
       User.aggregate([
@@ -112,11 +117,11 @@ const listStudents = async (req, res) => {
           }
         }
       ]),
-      StudentProfile.distinct('department'),
-      StudentProfile.distinct('branch'),
-      StudentProfile.distinct('section'),
-      StudentProfile.distinct('currentAcademicYear'),
-      StudentProfile.distinct('currentSemester')
+      StudentProfile.distinct('department', { branch: req.facultyBranch }),
+      StudentProfile.distinct('branch', { branch: req.facultyBranch }),
+      StudentProfile.distinct('section', { branch: req.facultyBranch }),
+      StudentProfile.distinct('currentAcademicYear', { branch: req.facultyBranch }),
+      StudentProfile.distinct('currentSemester', { branch: req.facultyBranch })
     ]);
     const total = totalResult[0]?.total || 0;
     return res.status(200).json({
@@ -141,13 +146,18 @@ const getStudentDetails = async (req, res) => {
     if (!mongoose.isValidObjectId(studentId)) {
       return res.status(400).json({ message: 'Invalid student ID.' });
     }
+    const profile = await StudentProfile.findOne({
+      userId: studentId,
+      branch: req.facultyBranch
+    }).lean();
+    if (!profile) return res.status(404).json({ message: 'Student not found in your assigned branch.' });
+
     const student = await User.findOne({ _id: studentId, role: 'student' })
       .select('_id username email fullName phone createdAt')
       .lean();
     if (!student) return res.status(404).json({ message: 'Student not found.' });
 
-    const [profile, summary] = await Promise.all([
-      StudentProfile.findOne({ userId: student._id }).lean(),
+    const [summary] = await Promise.all([
       Achievement.aggregate([
         {
           $match: {
@@ -181,6 +191,9 @@ const getStudentDetails = async (req, res) => {
 
 const getStudentCertificates = async (req, res) => {
   try {
+    if (req.query.branch && !canAccessBranch(req.facultyBranch, req.query.branch)) {
+      return res.status(403).json({ message: 'Faculty may only access certificates in their assigned branch.' });
+    }
     const { page, limit, skip } = pagination(req.query);
     const requestedStudentId = req.params.studentId || req.query.studentId;
     const pipeline = [
@@ -210,10 +223,16 @@ const getStudentCertificates = async (req, res) => {
       if (!mongoose.isValidObjectId(requestedStudentId)) {
         return res.status(400).json({ message: 'Invalid student ID.' });
       }
+      const studentProfile = await StudentProfile.findOne({
+        userId: requestedStudentId,
+        branch: req.facultyBranch
+      }).select('_id').lean();
+      if (!studentProfile) return res.status(404).json({ message: 'Student not found in your assigned branch.' });
       const studentExists = await User.exists({ _id: requestedStudentId, role: 'student' });
       if (!studentExists) return res.status(404).json({ message: 'Student not found.' });
       pipeline.push({ $match: { user: new mongoose.Types.ObjectId(requestedStudentId) } });
     }
+    pipeline.push({ $match: { 'profile.branch': req.facultyBranch } });
     if (typeof req.query.search === 'string' && req.query.search.trim()) {
       const match = safeRegex(req.query.search.trim());
       pipeline.push({
@@ -242,7 +261,7 @@ const getStudentCertificates = async (req, res) => {
       Achievement.aggregate([...pipeline, { $count: 'total' }]),
       Achievement.aggregate([
         ...pipeline,
-        { $sort: { createdAt: -1, _id: -1 } },
+        { $sort: { createdAt: req.query.sortOrder === 'asc' ? 1 : -1, _id: req.query.sortOrder === 'asc' ? 1 : -1 } },
         { $skip: skip },
         { $limit: limit },
         {
@@ -288,6 +307,9 @@ const getStudentCertificate = async (req, res) => {
       .lean();
     if (!certificate || certificate.user?.role !== 'student') return res.status(404).json({ message: 'Student certificate not found.' });
     const profile = await StudentProfile.findOne({ userId: certificate.user._id }).lean();
+    if (!canAccessBranch(req.facultyBranch, profile?.branch)) {
+      return res.status(404).json({ message: 'Student certificate not found in your assigned branch.' });
+    }
     return res.status(200).json({
       certificate: withSignedCertificateUrl({ ...certificate, profile })
     });

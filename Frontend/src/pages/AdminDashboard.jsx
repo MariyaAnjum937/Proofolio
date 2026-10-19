@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Route, Routes, useParams, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
 
 const API_ROOT = `${API_BASE_URL}/api/admin`;
+const BRANCHES = ["CSE", "CSM", "CSD", "CSC", "CSE IoT", "Civil", "Mechanical", "ECE"];
 
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, { credentials: "include", ...options });
@@ -27,6 +28,7 @@ function AdminDashboard() {
         <NavLink to="/admin" end>Overview</NavLink>
         <NavLink to="/admin/students">Students</NavLink>
         <NavLink to="/admin/certificates">Certificates</NavLink>
+        <NavLink to="/admin/faculty-directory">Faculty Directory</NavLink>
         <NavLink to="/admin/faculty">Faculty Approvals</NavLink>
       </nav>
 
@@ -35,7 +37,8 @@ function AdminDashboard() {
         <Route path="students" element={<StudentDirectoryPage />} />
         <Route path="students/:id" element={<StudentDetailsPage />} />
         <Route path="students/:id/certificates" element={<CertificatesPage />} />
-        <Route path="certificates" element={<CertificatesPage />} />
+        <Route path="certificates" element={<CertificateSectionPage />} />
+        <Route path="faculty-directory" element={<FacultyDirectoryPage />} />
         <Route path="faculty" element={<FacultyApprovalsPage />} />
       </Routes>
     </div>
@@ -178,7 +181,7 @@ function StudentDirectoryPage() {
           <input id="student-search" value={search} onChange={updateFilter(setSearch)} placeholder="Search students" />
         </div>
         <FilterSelect id="student-department" label="Department" value={department} values={filters.departments} onChange={updateFilter(setDepartment)} />
-        <FilterSelect id="student-branch" label="Branch" value={branch} values={filters.branches} onChange={updateFilter(setBranch)} />
+        <FilterSelect id="student-branch" label="Branch" value={branch} values={BRANCHES} allLabel="All Branches" onChange={updateFilter(setBranch)} />
         <FilterSelect id="student-section" label="Section" value={section} values={filters.sections} onChange={updateFilter(setSection)} />
         <FilterSelect id="student-year" label="Academic year" value={academicYear} values={filters.academicYears} onChange={updateFilter(setAcademicYear)} />
         <FilterSelect id="student-semester" label="Semester" value={semester} values={filters.semesters} onChange={updateFilter(setSemester)} />
@@ -223,15 +226,243 @@ function StudentDirectoryPage() {
   );
 }
 
-function FilterSelect({ id, label, value, values, onChange }) {
+function CertificateSectionPage() {
+  const [searchParams] = useSearchParams();
+  return searchParams.get("ownerRole") === "faculty"
+    ? <CertificatesPage />
+    : <CertificateStudentDirectoryPage />;
+}
+
+function CertificateStudentDirectoryPage() {
+  const [searchParams] = useSearchParams();
+  const [students, setStudents] = useState([]);
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [branch, setBranch] = useState(searchParams.get("branch") || "");
+  const [certificateStatus, setCertificateStatus] = useState(searchParams.get("status") || "");
+  const [certificateType, setCertificateType] = useState(searchParams.get("type") || "");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setSearch(searchParams.get("search") || "");
+    setBranch(searchParams.get("branch") || "");
+    setCertificateStatus(searchParams.get("status") || "");
+    setCertificateType(searchParams.get("type") || "");
+  }, [searchParams]);
+
+  useEffect(() => {
+    const query = new URLSearchParams({ page: String(page), limit: "20" });
+    if (search.trim()) query.set("search", search.trim());
+    if (branch) query.set("branch", branch);
+    if (certificateStatus) query.set("certificateStatus", certificateStatus);
+    if (certificateType) query.set("certificateType", certificateType);
+
+    setLoading(true);
+    fetchJson(`${API_ROOT}/students?${query}`)
+      .then((data) => {
+        setStudents(data.students || []);
+        setPagination(data.pagination || { total: 0, totalPages: 0 });
+        setError("");
+      })
+      .catch((requestError) => setError(requestError.message))
+      .finally(() => setLoading(false));
+  }, [page, search, branch, certificateStatus, certificateType]);
+
+  const updateFilter = (setter) => (event) => {
+    setter(event.target.value);
+    setPage(1);
+  };
+
+  return (
+    <section className="admin-users-panel">
+      <div className="admin-section-heading">
+        <div><h2>Student Certificate Directory</h2><p>{pagination.total} students · select a student to view their certificates</p></div>
+      </div>
+      <div className="admin-filters">
+        <div className="field">
+          <label htmlFor="certificate-student-search">Search student name, roll number, or email</label>
+          <input id="certificate-student-search" value={search} onChange={updateFilter(setSearch)} placeholder="Search students" />
+        </div>
+        <FilterSelect id="certificate-student-branch" label="Branch" value={branch} values={BRANCHES} allLabel="All Branches" onChange={updateFilter(setBranch)} />
+        <div className="field">
+          <label htmlFor="directory-certificate-status">Certificate status</label>
+          <select id="directory-certificate-status" value={certificateStatus} onChange={updateFilter(setCertificateStatus)}>
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="verified">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="directory-certificate-type">Category</label>
+          <select id="directory-certificate-type" value={certificateType} onChange={updateFilter(setCertificateType)}>
+            <option value="">All categories</option>
+            {["Hackathon", "Internship", "Certification", "Workshop", "Competition", "Extracurricular", "Project", "Other"].map((value) => (
+              <option key={value} value={value}>{value}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {error && <p className="message error-message">{error}</p>}
+      {loading ? (
+        <div className="empty"><h3>Loading students...</h3></div>
+      ) : students.length === 0 ? (
+        <div className="empty"><h3>No students match these filters.</h3></div>
+      ) : (
+        <>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead><tr><th>Student</th><th>Roll number</th><th>Email</th><th>Branch</th><th>Certificates</th><th>Directory</th></tr></thead>
+              <tbody>
+                {students.map((student) => (
+                  <tr key={student._id}>
+                    <td>{student.profile?.fullName || student.fullName || student.username}</td>
+                    <td>{student.profile?.rollNumber || "—"}</td>
+                    <td>{student.email || "—"}</td>
+                    <td>{student.profile?.branch || "—"}</td>
+                    <td>{student.certificateCount ?? 0}</td>
+                    <td>
+                      <Link to={{
+                        pathname: `/admin/students/${student._id}/certificates`,
+                        search: new URLSearchParams({
+                          ...(branch ? { branch } : {}),
+                          ...(search.trim() ? { directorySearch: search.trim() } : {}),
+                          ...(certificateStatus ? { status: certificateStatus } : {}),
+                          ...(certificateType ? { type: certificateType } : {})
+                        }).toString()
+                      }}>View certificates</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} pagination={pagination} setPage={setPage} />
+        </>
+      )}
+    </section>
+  );
+}
+
+function FilterSelect({ id, label, value, values, onChange, allLabel = "All" }) {
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
       <select id={id} value={value} onChange={onChange}>
-        <option value="">All</option>
+        <option value="">{allLabel}</option>
         {values.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
     </div>
+  );
+}
+
+function FacultyDirectoryPage() {
+  const [faculty, setFaculty] = useState([]);
+  const [branches, setBranches] = useState(BRANCHES);
+  const [branch, setBranch] = useState("");
+  const [search, setSearch] = useState("");
+  const [branchChanges, setBranchChanges] = useState({});
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState(null);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const loadFaculty = useCallback(async () => {
+    const query = new URLSearchParams({ page: String(page), limit: "20" });
+    if (branch) query.set("branch", branch);
+    if (search.trim()) query.set("search", search.trim());
+    setLoading(true);
+    try {
+      const data = await fetchJson(`${API_ROOT}/faculty?${query}`);
+      setFaculty(data.faculty || []);
+      setBranches(data.branches || BRANCHES);
+      setPagination(data.pagination || { total: 0, totalPages: 0 });
+      setBranchChanges(Object.fromEntries((data.faculty || []).map((member) => [member._id, member.profile?.branch || ""])));
+      setError("");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, branch, search]);
+
+  useEffect(() => { loadFaculty(); }, [loadFaculty]);
+
+  const saveBranch = async (member) => {
+    setSavingId(member._id);
+    setMessage("");
+    setError("");
+    try {
+      const data = await fetchJson(`${API_ROOT}/faculty/${member._id}/branch`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: branchChanges[member._id] })
+      });
+      setMessage(data.message || "Faculty branch assignment updated.");
+      await loadFaculty();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const updateFilter = (setter) => (event) => {
+    setter(event.target.value);
+    setPage(1);
+  };
+
+  return (
+    <section className="admin-users-panel">
+      <div className="admin-section-heading">
+        <div><h2>Faculty Directory</h2><p>{pagination.total} faculty records · branch assignments control certificate review access</p></div>
+      </div>
+      <div className="admin-filters">
+        <div className="field"><label htmlFor="faculty-directory-search">Search name, email, employee ID, or department</label><input id="faculty-directory-search" value={search} onChange={updateFilter(setSearch)} placeholder="Search faculty" /></div>
+        <FilterSelect id="faculty-directory-branch" label="Branch" value={branch} values={branches} allLabel="All Branches" onChange={updateFilter(setBranch)} />
+      </div>
+      {message && <p className="message">{message}</p>}
+      {error && <p className="message error-message">{error}</p>}
+      {loading ? (
+        <div className="empty"><h3>Loading faculty directory...</h3></div>
+      ) : faculty.length === 0 ? (
+        <div className="empty"><h3>No faculty match these filters.</h3></div>
+      ) : (
+        <>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Employee ID</th><th>Department</th><th>Designation</th><th>Status</th><th>Review branch</th></tr></thead>
+              <tbody>{faculty.map((member) => (
+                <tr key={member._id}>
+                  <td>{member.profile?.fullName || member.fullName || member.username}</td>
+                  <td>{member.email}</td>
+                  <td>{member.profile?.employeeId || "—"}</td>
+                  <td>{member.profile?.department || "—"}</td>
+                  <td>{member.profile?.designation || "—"}</td>
+                  <td>{member.status || "approved"}</td>
+                  <td>
+                    <div className="admin-table-actions">
+                      <select aria-label={`Branch assignment for ${member.profile?.fullName || member.username}`} value={branchChanges[member._id] || ""} onChange={(event) => setBranchChanges((previous) => ({ ...previous, [member._id]: event.target.value }))}>
+                        <option value="">Unassigned</option>
+                        {branches.map((item) => <option key={item} value={item}>{item}</option>)}
+                      </select>
+                      <button type="button" disabled={savingId === member._id || (branchChanges[member._id] || "") === (member.profile?.branch || "")} onClick={() => saveBranch(member)}>
+                        {savingId === member._id ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <Pagination page={page} pagination={pagination} setPage={setPage} />
+        </>
+      )}
+    </section>
   );
 }
 
@@ -330,31 +561,43 @@ function CertificatesPage() {
   const [certificates, setCertificates] = useState([]);
   const [student, setStudent] = useState(null);
   const [statusCounts, setStatusCounts] = useState({ pending: 0, verified: 0, rejected: 0 });
-  const [search, setSearch] = useState("");
-  const [ownerRole, setOwnerRole] = useState(searchParams.get("ownerRole") || "");
-  const [department, setDepartment] = useState("");
-  const [type, setType] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [ownerRole, setOwnerRole] = useState(studentId ? "student" : searchParams.get("ownerRole") || "");
+  const [department, setDepartment] = useState(searchParams.get("department") || "");
+  const [branch, setBranch] = useState(searchParams.get("branch") || "");
+  const [type, setType] = useState(searchParams.get("type") || "");
   const [status, setStatus] = useState(searchParams.get("status") || "");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [sortOrder, setSortOrder] = useState(searchParams.get("sortOrder") || "desc");
+  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") || "");
+  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") || "");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0, limit: 20 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setOwnerRole(searchParams.get("ownerRole") || "");
+    setOwnerRole(studentId ? "student" : searchParams.get("ownerRole") || "");
+    setSearch(searchParams.get("search") || "");
+    setDepartment(searchParams.get("department") || "");
+    setBranch(searchParams.get("branch") || "");
+    setType(searchParams.get("type") || "");
     setStatus(searchParams.get("status") || "");
-  }, [searchParams]);
+    setSortOrder(searchParams.get("sortOrder") || "desc");
+    setDateFrom(searchParams.get("dateFrom") || "");
+    setDateTo(searchParams.get("dateTo") || "");
+  }, [searchParams, studentId]);
 
   useEffect(() => {
     const query = new URLSearchParams({ page: String(page), limit: "20" });
     if (ownerRole) query.set("ownerRole", ownerRole);
+    if (studentId) query.set("ownerRole", "student");
     if (studentId) query.set("studentId", studentId);
+    if (branch) query.set("branch", branch);
     if (search.trim()) query.set("search", search.trim());
     if (department) query.set("department", department);
     if (type) query.set("type", type);
     if (status) query.set("status", status);
+    if (sortOrder) query.set("sortOrder", sortOrder);
     if (dateFrom) query.set("dateFrom", dateFrom);
     if (dateTo) query.set("dateTo", dateTo);
 
@@ -374,7 +617,7 @@ function CertificatesPage() {
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
-  }, [studentId, page, search, ownerRole, department, type, status, dateFrom, dateTo]);
+  }, [studentId, page, search, ownerRole, department, branch, type, status, sortOrder, dateFrom, dateTo, searchParams]);
 
   const updateFilter = (setter) => (event) => {
     setter(event.target.value);
@@ -385,14 +628,23 @@ function CertificatesPage() {
     <section className="admin-users-panel">
       <div className="admin-section-heading">
         <div>
-          <h2>{studentId ? "Student Certificates" : "Student Certificates Directory"}</h2>
+          <h2>{studentId ? "Student Certificates" : ownerRole === "faculty" ? "Faculty Certificates" : "Student Certificates Directory"}</h2>
           <p>
             {studentId
               ? `${student?.profile?.fullName || student?.fullName || student?.username || "Student"} · Roll number: ${student?.profile?.rollNumber || "—"} · ${pagination.total} achievement records`
               : `${pagination.total} achievement records`}
           </p>
         </div>
-        {studentId && <Link className="text-action" to={`/admin/students/${studentId}`}>← Back to student profile</Link>}
+        {studentId && (
+          <Link className="text-action" to={`/admin/certificates?${new URLSearchParams({
+            ...(searchParams.get("branch") ? { branch: searchParams.get("branch") } : {}),
+            ...(searchParams.get("directorySearch") ? { search: searchParams.get("directorySearch") } : {}),
+            ...(searchParams.get("status") ? { status: searchParams.get("status") } : {}),
+            ...(searchParams.get("type") ? { type: searchParams.get("type") } : {})
+          }).toString()}`}>
+            ← Back to student directory
+          </Link>
+        )}
       </div>
 
       <div className="stats-row admin-detail-stats">
@@ -403,14 +655,14 @@ function CertificatesPage() {
       </div>
 
       <div className="admin-filters certificate-filters">
-        <div className="field">
+        {!studentId && <div className="field">
           <label htmlFor="certificate-owner-role">Certificate owner</label>
           <select id="certificate-owner-role" value={ownerRole} onChange={updateFilter(setOwnerRole)}>
             <option value="">All certificates</option>
             <option value="student">Student certificates</option>
             <option value="faculty">Faculty certificates</option>
           </select>
-        </div>
+        </div>}
         <div className="field">
           <label htmlFor="certificate-search">Search title, student, or roll number</label>
           <input id="certificate-search" value={search} onChange={updateFilter(setSearch)} placeholder="Search certificates" />
@@ -419,6 +671,7 @@ function CertificatesPage() {
           <label htmlFor="certificate-department">Department</label>
           <input id="certificate-department" value={department} onChange={updateFilter(setDepartment)} placeholder="All departments" />
         </div>
+        {!studentId && <FilterSelect id="certificate-branch" label="Branch" value={branch} values={BRANCHES} allLabel="All Branches" onChange={updateFilter(setBranch)} />}
         <div className="field">
           <label htmlFor="certificate-type">Category</label>
           <select id="certificate-type" value={type} onChange={updateFilter(setType)}>
@@ -435,6 +688,13 @@ function CertificatesPage() {
             <option value="pending">Pending</option>
             <option value="verified">Approved</option>
             <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="certificate-sort-order">Submission date</label>
+          <select id="certificate-sort-order" value={sortOrder} onChange={updateFilter(setSortOrder)}>
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
           </select>
         </div>
         <div className="field">

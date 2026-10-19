@@ -35,6 +35,11 @@ const facultyProfileSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
+    branch: {
+      type: String,
+      default: '',
+      trim: true
+    },
     designation: {
       type: String,
       required: true,
