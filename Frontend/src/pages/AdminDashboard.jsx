@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Route, Routes, useParams, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
+import Icon from "../components/Icons";
+import { StatusBadge, RoleBadge, CategoryBadge } from "../components/Badge";
+import { StatCard } from "../components/StatCard";
+import { ConfirmModal } from "../components/Modal";
+import { EmptyState, LoadingSkeleton } from "../components/EmptyState";
 
 const API_ROOT = `${API_BASE_URL}/api/admin`;
 const BRANCHES = ["CSE", "CSM", "CSD", "CSC", "CSE IoT", "Civil", "Mechanical", "ECE"];
@@ -15,22 +20,50 @@ async function fetchJson(url, options = {}) {
 }
 
 function AdminDashboard() {
+  const navLinkClass = ({ isActive }) =>
+    `inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+      isActive
+        ? "text-indigo-600 bg-indigo-50/80 shadow-xs"
+        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
+    }`;
+
   return (
-    <div className="page admin-dashboard">
-      <div className="dashboard-header">
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1>Admin Dashboard</h1>
-          <p>Institutional overview of students, achievements, and faculty approvals.</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Institutional Admin Console
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Global governance over students, verified credentials, faculty directory, and branch assignments.
+          </p>
         </div>
       </div>
 
-      <nav className="admin-nav" aria-label="Admin dashboard">
-        <NavLink to="/admin" end>Overview</NavLink>
-        <NavLink to="/admin/students">Students</NavLink>
-        <NavLink to="/admin/certificates">Certificates</NavLink>
-        <NavLink to="/admin/faculty-directory">Faculty Directory</NavLink>
-        <NavLink to="/admin/faculty">Faculty Approvals</NavLink>
-      </nav>
+      {/* Subnav Tabs */}
+      <div className="flex items-center gap-1 p-1.5 bg-white border border-slate-200/90 rounded-xl overflow-x-auto shadow-xs">
+        <NavLink to="/admin" end className={navLinkClass}>
+          <Icon name="award" className="w-4 h-4" />
+          <span>System Overview</span>
+        </NavLink>
+        <NavLink to="/admin/students" className={navLinkClass}>
+          <Icon name="graduation-cap" className="w-4 h-4" />
+          <span>Students Directory</span>
+        </NavLink>
+        <NavLink to="/admin/certificates" className={navLinkClass}>
+          <Icon name="file-text" className="w-4 h-4" />
+          <span>All Certificates</span>
+        </NavLink>
+        <NavLink to="/admin/faculty-directory" className={navLinkClass}>
+          <Icon name="building" className="w-4 h-4" />
+          <span>Faculty Directory</span>
+        </NavLink>
+        <NavLink to="/admin/faculty" className={navLinkClass}>
+          <Icon name="shield" className="w-4 h-4" />
+          <span>Faculty Approvals</span>
+        </NavLink>
+      </div>
 
       <Routes>
         <Route index element={<OverviewPage />} />
@@ -61,62 +94,89 @@ function OverviewPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="empty"><h3>Loading dashboard statistics...</h3></div>;
-  if (error) return <div className="message error-message">{error}</div>;
-  if (!stats) return <div className="empty"><h3>Dashboard statistics are unavailable.</h3></div>;
+  if (loading) return <LoadingSkeleton count={4} />;
+  if (error) return <div className="p-4 bg-rose-50 text-rose-800 text-sm rounded-xl">{error}</div>;
+  if (!stats) return <EmptyState title="Dashboard statistics unavailable." />;
 
-  const cards = [
-    { label: "Registered Students", value: stats.totalStudents, to: "/admin/students" },
-    { label: "Approved Faculty", value: stats.approvedFaculty, to: "/admin/faculty" },
-    { label: "Certificates Submitted", value: stats.totalCertificates, to: "/admin/certificates" },
-    { label: "Faculty Certificates", value: stats.facultyCertificates, to: "/admin/certificates?ownerRole=faculty" },
-    { label: "Approved Certificates", value: stats.approvedCertificates, to: "/admin/certificates?status=verified", className: "verified-stat" },
-    { label: "Pending Faculty Approvals", value: stats.pendingFacultyApprovals, to: "/admin/faculty", className: "pending-stat" },
-    { label: "Pending Certificate Reviews", value: stats.pendingCertificateReviews, to: "/admin/certificates?status=pending", className: "pending-stat" }
+  const statCards = [
+    { label: "Registered Students", value: stats.totalStudents, to: "/admin/students", icon: "graduation-cap", variant: "default" },
+    { label: "Approved Faculty", value: stats.approvedFaculty, to: "/admin/faculty-directory", icon: "users", variant: "default" },
+    { label: "Certificates Submitted", value: stats.totalCertificates, to: "/admin/certificates", icon: "file-text", variant: "default" },
+    { label: "Verified Certificates", value: stats.approvedCertificates, to: "/admin/certificates?status=verified", icon: "check-circle", variant: "verified" },
+    { label: "Pending Faculty Approvals", value: stats.pendingFacultyApprovals, to: "/admin/faculty", icon: "shield", variant: "pending" },
+    { label: "Pending Certificate Reviews", value: stats.pendingCertificateReviews, to: "/admin/certificates?status=pending", icon: "clock", variant: "pending" },
+    { label: "Faculty Certificates", value: stats.facultyCertificates, to: "/admin/certificates?ownerRole=faculty", icon: "award", variant: "default" }
   ];
 
   return (
-    <>
-      <div className="stats-row admin-stats-row">
-        {cards.map((card) => (
-          <Link className={`stat-card admin-stat-card ${card.className || ""}`} to={card.to} key={card.label}>
-            <span>{card.label}</span>
-            <strong>{card.value}</strong>
-          </Link>
+    <div className="space-y-6">
+      {/* Metric Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {statCards.map((card) => (
+          <StatCard
+            key={card.label}
+            label={card.label}
+            value={card.value}
+            to={card.to}
+            icon={card.icon}
+            variant={card.variant}
+          />
         ))}
       </div>
 
-      <section className="admin-users-panel admin-overview-panel">
-        <div className="admin-section-heading">
+      {/* Recent Students Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <h2>Recently Registered Students</h2>
-            <p>Latest student accounts registered in Proofolio.</p>
+            <h2 className="text-base font-bold text-slate-900">Recently Registered Students</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Latest student profiles onboarded to Proofolio.</p>
           </div>
-          <Link className="text-action" to="/admin/students">View student directory</Link>
+          <Link to="/admin/students" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+            <span>View All Students</span>
+            <Icon name="chevron-right" className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {recentStudents.length === 0 ? (
-          <div className="empty"><h3>No students have registered yet.</h3></div>
+          <EmptyState title="No recent student registrations." />
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr><th>Student</th><th>Email</th><th>Registered</th></tr>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                  <th className="p-3.5">Student</th>
+                  <th className="p-3.5">Email</th>
+                  <th className="p-3.5">Registration Date</th>
+                  <th className="p-3.5 text-right">Actions</th>
+                </tr>
               </thead>
-              <tbody>
-                {recentStudents.map((student) => (
-                  <tr key={student._id}>
-                    <td>{student.fullName || student.username}</td>
-                    <td>{student.email}</td>
-                    <td>{student.createdAt ? new Date(student.createdAt).toLocaleDateString() : "—"}</td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-slate-100">
+                {recentStudents.map((student) => {
+                  const name = student.fullName || student.username;
+                  return (
+                    <tr key={student._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5 font-semibold text-slate-800">{name}</td>
+                      <td className="p-3.5 text-slate-600">{student.email}</td>
+                      <td className="p-3.5 text-slate-500">
+                        {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <Link
+                          to={`/admin/students/${student._id}`}
+                          className="px-2.5 py-1 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-semibold rounded-lg"
+                        >
+                          View Details
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
-      </section>
-    </>
+      </div>
+    </div>
   );
 }
 
@@ -153,7 +213,7 @@ function StudentDirectoryPage() {
     fetchJson(`${API_ROOT}/students?${query}`)
       .then((data) => {
         setStudents(data.students || []);
-        setFilters(data.filters || filters);
+        if (data.filters) setFilters(data.filters);
         setPagination(data.pagination || { total: 0, totalPages: 0, limit: 20 });
         setError("");
       })
@@ -161,68 +221,90 @@ function StudentDirectoryPage() {
       .finally(() => setLoading(false));
   }, [page, search, department, branch, section, academicYear, semester]);
 
-  const updateFilter = (setter) => (event) => {
-    setter(event.target.value);
+  const updateFilter = (setter) => (e) => {
+    setter(e.target.value);
     setPage(1);
   };
 
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading">
-        <div>
-          <h2>Student Directory</h2>
-          <p>{pagination.total} registered students</p>
-        </div>
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
+      <div className="pb-4 border-b border-slate-100">
+        <h2 className="text-lg font-bold text-slate-900">Institutional Student Directory</h2>
+        <p className="text-xs text-slate-500 mt-0.5">
+          {pagination.total} registered students across all academic branches.
+        </p>
       </div>
 
-      <div className="admin-filters">
+      {/* Filter Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
         <div className="field">
-          <label htmlFor="student-search">Search name, roll number, or email</label>
-          <input id="student-search" value={search} onChange={updateFilter(setSearch)} placeholder="Search students" />
+          <label htmlFor="student-search">Search</label>
+          <input id="student-search" value={search} onChange={updateFilter(setSearch)} placeholder="Name, roll number, email..." className="text-xs" />
         </div>
         <FilterSelect id="student-department" label="Department" value={department} values={filters.departments} onChange={updateFilter(setDepartment)} />
         <FilterSelect id="student-branch" label="Branch" value={branch} values={BRANCHES} allLabel="All Branches" onChange={updateFilter(setBranch)} />
         <FilterSelect id="student-section" label="Section" value={section} values={filters.sections} onChange={updateFilter(setSection)} />
-        <FilterSelect id="student-year" label="Academic year" value={academicYear} values={filters.academicYears} onChange={updateFilter(setAcademicYear)} />
+        <FilterSelect id="student-year" label="Academic Year" value={academicYear} values={filters.academicYears} onChange={updateFilter(setAcademicYear)} />
         <FilterSelect id="student-semester" label="Semester" value={semester} values={filters.semesters} onChange={updateFilter(setSemester)} />
       </div>
 
-      {error && <p className="message error-message">{error}</p>}
+      {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
       {loading ? (
-        <div className="empty"><h3>Loading students...</h3></div>
+        <LoadingSkeleton count={3} />
       ) : students.length === 0 ? (
-        <div className="empty"><h3>No students match these filters.</h3></div>
+        <EmptyState title="No students match the selected filter criteria." />
       ) : (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
+        <div className="space-y-4">
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr>
-                  <th>Name</th><th>Roll number</th><th>Department</th><th>Branch</th>
-                  <th>Academic year</th><th>Semester</th><th>Section</th><th>Certificates</th><th>Profile</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                  <th className="p-3.5">Student</th>
+                  <th className="p-3.5">Roll Number</th>
+                  <th className="p-3.5">Department</th>
+                  <th className="p-3.5">Branch</th>
+                  <th className="p-3.5">Year / Sem</th>
+                  <th className="p-3.5">Section</th>
+                  <th className="p-3.5 text-center">Certs</th>
+                  <th className="p-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student._id}>
-                    <td>{student.profile?.fullName || student.fullName || student.username}</td>
-                    <td>{student.profile?.rollNumber || "—"}</td>
-                    <td>{student.profile?.department || "—"}</td>
-                    <td>{student.profile?.branch || "—"}</td>
-                    <td>{student.profile?.currentAcademicYear || "—"}</td>
-                    <td>{student.profile?.currentSemester ?? "—"}</td>
-                    <td>{student.profile?.section || "—"}</td>
-                    <td>{student.certificateCount ?? 0}</td>
-                    <td><Link to={`/admin/students/${student._id}`}>View details</Link></td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-slate-100">
+                {students.map((student) => {
+                  const name = student.profile?.fullName || student.fullName || student.username;
+                  return (
+                    <tr key={student._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5">
+                        <span className="font-semibold text-slate-800 block">{name}</span>
+                        <span className="text-[11px] text-slate-400">{student.email}</span>
+                      </td>
+                      <td className="p-3.5 font-mono text-slate-700">{student.profile?.rollNumber || "—"}</td>
+                      <td className="p-3.5 text-slate-600">{student.profile?.department || "—"}</td>
+                      <td className="p-3.5 text-slate-600">{student.profile?.branch || "—"}</td>
+                      <td className="p-3.5 text-slate-600">
+                        {student.profile?.currentAcademicYear || "—"}{student.profile?.currentSemester ? ` (Sem ${student.profile.currentSemester})` : ""}
+                      </td>
+                      <td className="p-3.5 text-slate-600">{student.profile?.section || "—"}</td>
+                      <td className="p-3.5 text-center font-bold text-slate-700">{student.certificateCount ?? 0}</td>
+                      <td className="p-3.5 text-right whitespace-nowrap">
+                        <Link
+                          to={`/admin/students/${student._id}`}
+                          className="px-2.5 py-1 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-semibold rounded-lg"
+                        >
+                          View Details
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <Pagination page={page} pagination={pagination} setPage={setPage} />
-        </>
+        </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -270,288 +352,112 @@ function CertificateStudentDirectoryPage() {
       .finally(() => setLoading(false));
   }, [page, search, branch, certificateStatus, certificateType]);
 
-  const updateFilter = (setter) => (event) => {
-    setter(event.target.value);
+  const updateFilter = (setter) => (e) => {
+    setter(e.target.value);
     setPage(1);
   };
 
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading">
-        <div><h2>Student Certificate Directory</h2><p>{pagination.total} students · select a student to view their certificates</p></div>
-      </div>
-      <div className="admin-filters">
-        <div className="field">
-          <label htmlFor="certificate-student-search">Search student name, roll number, or email</label>
-          <input id="certificate-student-search" value={search} onChange={updateFilter(setSearch)} placeholder="Search students" />
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-100">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Student Certificate Directory</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {pagination.total} students · select a student to inspect their submitted certificate archive.
+          </p>
         </div>
-        <FilterSelect id="certificate-student-branch" label="Branch" value={branch} values={BRANCHES} allLabel="All Branches" onChange={updateFilter(setBranch)} />
+        <Link
+          to="/admin/certificates?ownerRole=faculty"
+          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+        >
+          View Faculty Certificates Archive →
+        </Link>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
         <div className="field">
-          <label htmlFor="directory-certificate-status">Certificate status</label>
-          <select id="directory-certificate-status" value={certificateStatus} onChange={updateFilter(setCertificateStatus)}>
-            <option value="">All statuses</option>
+          <label htmlFor="cert-stud-search">Search</label>
+          <input id="cert-stud-search" value={search} onChange={updateFilter(setSearch)} placeholder="Student name, roll number..." className="text-xs" />
+        </div>
+        <FilterSelect id="cert-stud-branch" label="Branch" value={branch} values={BRANCHES} allLabel="All Branches" onChange={updateFilter(setBranch)} />
+        <div className="field">
+          <label htmlFor="dir-cert-status">Status</label>
+          <select id="dir-cert-status" value={certificateStatus} onChange={updateFilter(setCertificateStatus)} className="text-xs">
+            <option value="">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="verified">Approved</option>
             <option value="rejected">Rejected</option>
           </select>
         </div>
         <div className="field">
-          <label htmlFor="directory-certificate-type">Category</label>
-          <select id="directory-certificate-type" value={certificateType} onChange={updateFilter(setCertificateType)}>
-            <option value="">All categories</option>
-            {["Hackathon", "Internship", "Certification", "Workshop", "Competition", "Extracurricular", "Project", "Other"].map((value) => (
-              <option key={value} value={value}>{value}</option>
+          <label htmlFor="dir-cert-category">Category</label>
+          <select id="dir-cert-category" value={certificateType} onChange={updateFilter(setCertificateType)} className="text-xs">
+            <option value="">All Categories</option>
+            {["Hackathon", "Internship", "Certification", "Workshop", "Competition", "Extracurricular", "Project", "Other"].map((val) => (
+              <option key={val} value={val}>{val}</option>
             ))}
           </select>
         </div>
       </div>
-      {error && <p className="message error-message">{error}</p>}
+
+      {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
       {loading ? (
-        <div className="empty"><h3>Loading students...</h3></div>
+        <LoadingSkeleton count={3} />
       ) : students.length === 0 ? (
-        <div className="empty"><h3>No students match these filters.</h3></div>
+        <EmptyState title="No students found matching your criteria." />
       ) : (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead><tr><th>Student</th><th>Roll number</th><th>Email</th><th>Branch</th><th>Certificates</th><th>Directory</th></tr></thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student._id}>
-                    <td>{student.profile?.fullName || student.fullName || student.username}</td>
-                    <td>{student.profile?.rollNumber || "—"}</td>
-                    <td>{student.email || "—"}</td>
-                    <td>{student.profile?.branch || "—"}</td>
-                    <td>{student.certificateCount ?? 0}</td>
-                    <td>
-                      <Link to={{
-                        pathname: `/admin/students/${student._id}/certificates`,
-                        search: new URLSearchParams({
-                          ...(branch ? { branch } : {}),
-                          ...(search.trim() ? { directorySearch: search.trim() } : {}),
-                          ...(certificateStatus ? { status: certificateStatus } : {}),
-                          ...(certificateType ? { type: certificateType } : {})
-                        }).toString()
-                      }}>View certificates</Link>
-                    </td>
-                  </tr>
-                ))}
+        <div className="space-y-4">
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                  <th className="p-3.5">Student</th>
+                  <th className="p-3.5">Roll Number</th>
+                  <th className="p-3.5">Branch</th>
+                  <th className="p-3.5 text-center">Certificates</th>
+                  <th className="p-3.5 text-right">Certificate Archives</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {students.map((student) => {
+                  const name = student.profile?.fullName || student.fullName || student.username;
+                  return (
+                    <tr key={student._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5">
+                        <span className="font-semibold text-slate-800 block">{name}</span>
+                        <span className="text-[11px] text-slate-400">{student.email}</span>
+                      </td>
+                      <td className="p-3.5 font-mono text-slate-700">{student.profile?.rollNumber || "—"}</td>
+                      <td className="p-3.5 text-slate-600">{student.profile?.branch || "—"}</td>
+                      <td className="p-3.5 text-center font-bold text-slate-800">{student.certificateCount ?? 0}</td>
+                      <td className="p-3.5 text-right">
+                        <Link
+                          to={{
+                            pathname: `/admin/students/${student._id}/certificates`,
+                            search: new URLSearchParams({
+                              ...(branch ? { branch } : {}),
+                              ...(search.trim() ? { directorySearch: search.trim() } : {}),
+                              ...(certificateStatus ? { status: certificateStatus } : {}),
+                              ...(certificateType ? { type: certificateType } : {})
+                            }).toString()
+                          }}
+                          className="px-2.5 py-1 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-semibold rounded-lg"
+                        >
+                          View Records
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <Pagination page={page} pagination={pagination} setPage={setPage} />
-        </>
-      )}
-    </section>
-  );
-}
-
-function FilterSelect({ id, label, value, values, onChange, allLabel = "All" }) {
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      <select id={id} value={value} onChange={onChange}>
-        <option value="">{allLabel}</option>
-        {values.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
-    </div>
-  );
-}
-
-function FacultyDirectoryPage() {
-  const [faculty, setFaculty] = useState([]);
-  const [branches, setBranches] = useState(BRANCHES);
-  const [branch, setBranch] = useState("");
-  const [search, setSearch] = useState("");
-  const [branchChanges, setBranchChanges] = useState({});
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
-  const [loading, setLoading] = useState(true);
-  const [savingId, setSavingId] = useState(null);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-
-  const loadFaculty = useCallback(async () => {
-    const query = new URLSearchParams({ page: String(page), limit: "20" });
-    if (branch) query.set("branch", branch);
-    if (search.trim()) query.set("search", search.trim());
-    setLoading(true);
-    try {
-      const data = await fetchJson(`${API_ROOT}/faculty?${query}`);
-      setFaculty(data.faculty || []);
-      setBranches(data.branches || BRANCHES);
-      setPagination(data.pagination || { total: 0, totalPages: 0 });
-      setBranchChanges(Object.fromEntries((data.faculty || []).map((member) => [member._id, member.profile?.branch || ""])));
-      setError("");
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, branch, search]);
-
-  useEffect(() => { loadFaculty(); }, [loadFaculty]);
-
-  const saveBranch = async (member) => {
-    setSavingId(member._id);
-    setMessage("");
-    setError("");
-    try {
-      const data = await fetchJson(`${API_ROOT}/faculty/${member._id}/branch`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branch: branchChanges[member._id] })
-      });
-      setMessage(data.message || "Faculty branch assignment updated.");
-      await loadFaculty();
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  const updateFilter = (setter) => (event) => {
-    setter(event.target.value);
-    setPage(1);
-  };
-
-  return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading">
-        <div><h2>Faculty Directory</h2><p>{pagination.total} faculty records · branch assignments control certificate review access</p></div>
-      </div>
-      <div className="admin-filters">
-        <div className="field"><label htmlFor="faculty-directory-search">Search name, email, employee ID, or department</label><input id="faculty-directory-search" value={search} onChange={updateFilter(setSearch)} placeholder="Search faculty" /></div>
-        <FilterSelect id="faculty-directory-branch" label="Branch" value={branch} values={branches} allLabel="All Branches" onChange={updateFilter(setBranch)} />
-      </div>
-      {message && <p className="message">{message}</p>}
-      {error && <p className="message error-message">{error}</p>}
-      {loading ? (
-        <div className="empty"><h3>Loading faculty directory...</h3></div>
-      ) : faculty.length === 0 ? (
-        <div className="empty"><h3>No faculty match these filters.</h3></div>
-      ) : (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead><tr><th>Name</th><th>Email</th><th>Employee ID</th><th>Department</th><th>Designation</th><th>Status</th><th>Review branch</th></tr></thead>
-              <tbody>{faculty.map((member) => (
-                <tr key={member._id}>
-                  <td>{member.profile?.fullName || member.fullName || member.username}</td>
-                  <td>{member.email}</td>
-                  <td>{member.profile?.employeeId || "—"}</td>
-                  <td>{member.profile?.department || "—"}</td>
-                  <td>{member.profile?.designation || "—"}</td>
-                  <td>{member.status || "approved"}</td>
-                  <td>
-                    <div className="admin-table-actions">
-                      <select aria-label={`Branch assignment for ${member.profile?.fullName || member.username}`} value={branchChanges[member._id] || ""} onChange={(event) => setBranchChanges((previous) => ({ ...previous, [member._id]: event.target.value }))}>
-                        <option value="">Unassigned</option>
-                        {branches.map((item) => <option key={item} value={item}>{item}</option>)}
-                      </select>
-                      <button type="button" disabled={savingId === member._id || (branchChanges[member._id] || "") === (member.profile?.branch || "")} onClick={() => saveBranch(member)}>
-                        {savingId === member._id ? "Saving..." : "Save"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-          <Pagination page={page} pagination={pagination} setPage={setPage} />
-        </>
-      )}
-    </section>
-  );
-}
-
-function Pagination({ page, pagination, setPage }) {
-  if (pagination.totalPages <= 1) return null;
-  return (
-    <div className="admin-pagination">
-      <span>Page {page} of {pagination.totalPages} · {pagination.total} records</span>
-      <div>
-        <button type="button" onClick={() => setPage((current) => current - 1)} disabled={page <= 1}>Previous</button>
-        <button type="button" onClick={() => setPage((current) => current + 1)} disabled={page >= pagination.totalPages}>Next</button>
-      </div>
-    </div>
-  );
-}
-
-function StudentDetailsPage() {
-  const { id } = useParams();
-  const [student, setStudent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetchJson(`${API_ROOT}/students/${id}`)
-      .then((data) => setStudent(data.student))
-      .catch((requestError) => setError(requestError.message))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  if (loading) return <div className="empty"><h3>Loading student profile...</h3></div>;
-  if (error) return <p className="message error-message">{error}</p>;
-  if (!student) return <div className="empty"><h3>Student profile not found.</h3></div>;
-
-  const profile = student.profile || {};
-  const summary = student.achievementSummary || {};
-
-  return (
-    <div className="admin-detail-page">
-      <Link className="text-action" to="/admin/students">← Back to students</Link>
-      <section className="admin-users-panel">
-        <div className="admin-section-heading">
-          <div>
-            <h2>{profile.fullName || student.fullName || student.username}</h2>
-            <p>Read-only student profile</p>
-          </div>
-          <Link className="verify-button admin-link-button" to={`/admin/students/${student._id}/certificates`}>View certificates</Link>
         </div>
-        <div className="admin-detail-grid">
-          <DetailGroup title="Personal Information" items={[
-            ["Full name", profile.fullName || student.fullName],
-            ["Username", student.username],
-            ["Email", student.email],
-            ["Phone", profile.phone || student.phone]
-          ]} />
-          <DetailGroup title="Academic Information" items={[
-            ["Institution", profile.institution],
-            ["Degree", profile.degree],
-            ["Department", profile.department],
-            ["Branch / Specialization", profile.branch],
-            ["Roll number", profile.rollNumber],
-            ["Admission year", profile.admissionYear],
-            ["Expected graduation", profile.graduationYear],
-            ["Academic year", profile.currentAcademicYear],
-            ["Semester", profile.currentSemester],
-            ["Section", profile.section],
-            ["CGPA", profile.cgpa]
-          ]} />
-        </div>
-      </section>
-      <section className="stats-row admin-detail-stats">
-        <div className="stat-card"><span>Total certificates</span><strong>{summary.total ?? 0}</strong></div>
-        <div className="stat-card verified-stat"><span>Approved</span><strong>{summary.approved ?? 0}</strong></div>
-        <div className="stat-card pending-stat"><span>Pending</span><strong>{summary.pending ?? 0}</strong></div>
-        <div className="stat-card"><span>Rejected</span><strong>{summary.rejected ?? 0}</strong></div>
-      </section>
+      )}
     </div>
-  );
-}
-
-function DetailGroup({ title, items }) {
-  return (
-    <section className="admin-detail-group">
-      <h3>{title}</h3>
-      <dl>
-        {items.map(([label, value]) => (
-          <div key={label}><dt>{label}</dt><dd>{value === null || value === undefined || value === "" ? "—" : value}</dd></div>
-        ))}
-      </dl>
-    </section>
   );
 }
 
@@ -619,134 +525,291 @@ function CertificatesPage() {
       .finally(() => setLoading(false));
   }, [studentId, page, search, ownerRole, department, branch, type, status, sortOrder, dateFrom, dateTo, searchParams]);
 
-  const updateFilter = (setter) => (event) => {
-    setter(event.target.value);
+  const updateFilter = (setter) => (e) => {
+    setter(e.target.value);
     setPage(1);
   };
 
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading">
-        <div>
-          <h2>{studentId ? "Student Certificates" : ownerRole === "faculty" ? "Faculty Certificates" : "Student Certificates Directory"}</h2>
-          <p>
-            {studentId
-              ? `${student?.profile?.fullName || student?.fullName || student?.username || "Student"} · Roll number: ${student?.profile?.rollNumber || "—"} · ${pagination.total} achievement records`
-              : `${pagination.total} achievement records`}
-          </p>
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-100">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              {studentId ? "Student Certificates" : ownerRole === "faculty" ? "Faculty Certificates" : "All Achievement Certificates"}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {studentId
+                ? `${student?.profile?.fullName || student?.fullName || student?.username || "Student"} · Roll: ${student?.profile?.rollNumber || "—"} · ${pagination.total} records`
+                : `${pagination.total} records tracked`}
+            </p>
+          </div>
+          {studentId && (
+            <Link to="/admin/certificates" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+              ← Back to Directory
+            </Link>
+          )}
         </div>
-        {studentId && (
-          <Link className="text-action" to={`/admin/certificates?${new URLSearchParams({
-            ...(searchParams.get("branch") ? { branch: searchParams.get("branch") } : {}),
-            ...(searchParams.get("directorySearch") ? { search: searchParams.get("directorySearch") } : {}),
-            ...(searchParams.get("status") ? { status: searchParams.get("status") } : {}),
-            ...(searchParams.get("type") ? { type: searchParams.get("type") } : {})
-          }).toString()}`}>
-            ← Back to student directory
-          </Link>
+
+        {/* Status Count Metric Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StatCard label="Total Records" value={pagination.total} icon="file-text" />
+          <StatCard label="Approved" value={statusCounts.verified} icon="check-circle" variant="verified" />
+          <StatCard label="Pending" value={statusCounts.pending} icon="clock" variant="pending" />
+          <StatCard label="Rejected" value={statusCounts.rejected} icon="x-circle" variant="rejected" />
+        </div>
+
+        {/* Filter Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          {!studentId && (
+            <div className="field">
+              <label htmlFor="owner-role-filter">Owner Role</label>
+              <select id="owner-role-filter" value={ownerRole} onChange={updateFilter(setOwnerRole)} className="text-xs">
+                <option value="">All Roles</option>
+                <option value="student">Student Only</option>
+                <option value="faculty">Faculty Only</option>
+              </select>
+            </div>
+          )}
+          <div className="field">
+            <label htmlFor="admin-cert-search">Search</label>
+            <input id="admin-cert-search" value={search} onChange={updateFilter(setSearch)} placeholder="Title, student, roll..." className="text-xs" />
+          </div>
+          <div className="field">
+            <label htmlFor="admin-cert-dept">Department</label>
+            <input id="admin-cert-dept" value={department} onChange={updateFilter(setDepartment)} placeholder="Department..." className="text-xs" />
+          </div>
+          {!studentId && <FilterSelect id="admin-cert-branch" label="Branch" value={branch} values={BRANCHES} allLabel="All Branches" onChange={updateFilter(setBranch)} />}
+          <div className="field">
+            <label htmlFor="admin-cert-status">Status</label>
+            <select id="admin-cert-status" value={status} onChange={updateFilter(setStatus)} className="text-xs">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="verified">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="admin-cert-order">Order</label>
+            <select id="admin-cert-order" value={sortOrder} onChange={updateFilter(setSortOrder)} className="text-xs">
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+        </div>
+
+        {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
+        {loading ? (
+          <LoadingSkeleton count={3} />
+        ) : certificates.length === 0 ? (
+          <EmptyState title="No certificates match the selected filters." />
+        ) : (
+          <div className="space-y-4">
+            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                    <th className="p-3.5">Title</th>
+                    <th className="p-3.5">Owner</th>
+                    <th className="p-3.5">Role</th>
+                    <th className="p-3.5">Category</th>
+                    <th className="p-3.5">Organization</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {certificates.map((cert) => (
+                    <tr key={cert._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5 font-semibold text-slate-800 max-w-xs truncate">{cert.title}</td>
+                      <td className="p-3.5">
+                        <span className="font-medium text-slate-700 block">
+                          {cert.profile?.fullName || cert.owner?.fullName || cert.owner?.username}
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          {cert.ownerRole === "faculty" ? cert.profile?.employeeId : cert.profile?.rollNumber}
+                        </span>
+                      </td>
+                      <td className="p-3.5"><RoleBadge role={cert.ownerRole || cert.owner?.role} /></td>
+                      <td className="p-3.5"><CategoryBadge category={cert.type} /></td>
+                      <td className="p-3.5 text-slate-600">{cert.organization || "—"}</td>
+                      <td className="p-3.5"><StatusBadge status={cert.verificationStatus} /></td>
+                      <td className="p-3.5 text-right whitespace-nowrap space-x-2">
+                        {cert.certificateUrl && (
+                          <a
+                            href={cert.certificateUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 text-slate-700 bg-slate-100 hover:bg-slate-200 font-semibold rounded-lg inline-flex items-center gap-1"
+                          >
+                            <span>File</span>
+                            <Icon name="external-link" className="w-3 h-3" />
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination page={page} pagination={pagination} setPage={setPage} />
+          </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      <div className="stats-row admin-detail-stats">
-        <div className="stat-card"><span>Total certificates</span><strong>{pagination.total}</strong></div>
-        <div className="stat-card pending-stat"><span>Pending</span><strong>{statusCounts.pending}</strong></div>
-        <div className="stat-card verified-stat"><span>Approved</span><strong>{statusCounts.verified}</strong></div>
-        <div className="stat-card"><span>Rejected</span><strong>{statusCounts.rejected}</strong></div>
+function FacultyDirectoryPage() {
+  const [faculty, setFaculty] = useState([]);
+  const [branches, setBranches] = useState(BRANCHES);
+  const [branch, setBranch] = useState("");
+  const [search, setSearch] = useState("");
+  const [branchChanges, setBranchChanges] = useState({});
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState(null);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const loadFaculty = useCallback(async () => {
+    const query = new URLSearchParams({ page: String(page), limit: "20" });
+    if (branch) query.set("branch", branch);
+    if (search.trim()) query.set("search", search.trim());
+    setLoading(true);
+    try {
+      const data = await fetchJson(`${API_ROOT}/faculty?${query}`);
+      setFaculty(data.faculty || []);
+      setBranches(data.branches || BRANCHES);
+      setPagination(data.pagination || { total: 0, totalPages: 0 });
+      setBranchChanges(Object.fromEntries((data.faculty || []).map((m) => [m._id, m.profile?.branch || ""])));
+      setError("");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, branch, search]);
+
+  useEffect(() => {
+    loadFaculty();
+  }, [loadFaculty]);
+
+  const saveBranch = async (member) => {
+    setSavingId(member._id);
+    setMessage("");
+    setError("");
+    try {
+      const data = await fetchJson(`${API_ROOT}/faculty/${member._id}/branch`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: branchChanges[member._id] })
+      });
+      setMessage(data.message || "Faculty branch assignment updated.");
+      await loadFaculty();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
+      <div className="pb-4 border-b border-slate-100">
+        <h2 className="text-lg font-bold text-slate-900">Faculty Directory & Branch Assignments</h2>
+        <p className="text-xs text-slate-500 mt-0.5">
+          {pagination.total} registered faculty members · branch assignments govern student certificate review scope.
+        </p>
       </div>
 
-      <div className="admin-filters certificate-filters">
-        {!studentId && <div className="field">
-          <label htmlFor="certificate-owner-role">Certificate owner</label>
-          <select id="certificate-owner-role" value={ownerRole} onChange={updateFilter(setOwnerRole)}>
-            <option value="">All certificates</option>
-            <option value="student">Student certificates</option>
-            <option value="faculty">Faculty certificates</option>
-          </select>
-        </div>}
+      {/* Filter Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 max-w-xl">
         <div className="field">
-          <label htmlFor="certificate-search">Search title, student, or roll number</label>
-          <input id="certificate-search" value={search} onChange={updateFilter(setSearch)} placeholder="Search certificates" />
+          <label htmlFor="fac-dir-search">Search</label>
+          <input id="fac-dir-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, employee ID, department..." className="text-xs" />
         </div>
-        <div className="field">
-          <label htmlFor="certificate-department">Department</label>
-          <input id="certificate-department" value={department} onChange={updateFilter(setDepartment)} placeholder="All departments" />
-        </div>
-        {!studentId && <FilterSelect id="certificate-branch" label="Branch" value={branch} values={BRANCHES} allLabel="All Branches" onChange={updateFilter(setBranch)} />}
-        <div className="field">
-          <label htmlFor="certificate-type">Category</label>
-          <select id="certificate-type" value={type} onChange={updateFilter(setType)}>
-            <option value="">All categories</option>
-            {["Hackathon", "Internship", "Certification", "Workshop", "Competition", "Extracurricular", "Project", "Other"].map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="certificate-status">Verification status</label>
-          <select id="certificate-status" value={status} onChange={updateFilter(setStatus)}>
-            <option value="">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="verified">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="certificate-sort-order">Submission date</label>
-          <select id="certificate-sort-order" value={sortOrder} onChange={updateFilter(setSortOrder)}>
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="certificate-date-from">Submitted from</label>
-          <input id="certificate-date-from" type="date" value={dateFrom} onChange={updateFilter(setDateFrom)} />
-        </div>
-        <div className="field">
-          <label htmlFor="certificate-date-to">Submitted through</label>
-          <input id="certificate-date-to" type="date" value={dateTo} onChange={updateFilter(setDateTo)} />
-        </div>
+        <FilterSelect id="fac-dir-branch" label="Branch Filter" value={branch} values={branches} allLabel="All Branches" onChange={(e) => setBranch(e.target.value)} />
       </div>
 
-      {error && <p className="message error-message">{error}</p>}
+      {message && <div className="p-3 text-xs text-emerald-800 bg-emerald-50 rounded-xl">{message}</div>}
+      {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
       {loading ? (
-        <div className="empty"><h3>Loading certificates...</h3></div>
-      ) : certificates.length === 0 ? (
-        <div className="empty"><h3>No certificates match these filters.</h3></div>
+        <LoadingSkeleton count={3} />
+      ) : faculty.length === 0 ? (
+        <EmptyState title="No faculty members match these filters." />
       ) : (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
+        <div className="space-y-4">
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr><th>Achievement</th><th>Owner</th><th>Role</th><th>Roll number / Employee ID</th><th>Department</th><th>Category</th><th>Organization</th><th>Issue date</th><th>Submitted</th><th>Status</th><th>Actions</th></tr>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                  <th className="p-3.5">Faculty Member</th>
+                  <th className="p-3.5">Employee ID</th>
+                  <th className="p-3.5">Department</th>
+                  <th className="p-3.5">Designation</th>
+                  <th className="p-3.5">Status</th>
+                  <th className="p-3.5 text-right">Assigned Review Branch</th>
+                </tr>
               </thead>
-              <tbody>
-                {certificates.map((certificate) => (
-                  <tr key={certificate._id}>
-                    <td>{certificate.title}</td>
-                    <td>{certificate.profile?.fullName || certificate.owner?.fullName || certificate.owner?.username}</td>
-                    <td>{certificate.ownerRole || certificate.owner?.role}</td>
-                    <td>{certificate.ownerRole === "faculty" ? certificate.profile?.employeeId || "—" : certificate.profile?.rollNumber || "—"}</td>
-                    <td>{certificate.profile?.department || "—"}</td>
-                    <td>{certificate.type}</td>
-                    <td>{certificate.organization}</td>
-                    <td>{certificate.date ? new Date(certificate.date).toLocaleDateString() : "—"}</td>
-                    <td>{certificate.createdAt ? new Date(certificate.createdAt).toLocaleDateString() : "—"}</td>
-                    <td><span className={`status-badge ${certificate.verificationStatus || "pending"}`}>{certificate.verificationStatus || "pending"}</span></td>
-                    <td className="admin-table-actions">
-                      {certificate.ownerRole === "faculty"
-                        ? <Link to={`/admin/certificates?ownerRole=faculty`}>Faculty</Link>
-                        : <Link to={`/admin/students/${certificate.owner?._id}`}>Student</Link>}
-                      {certificate.certificateUrl && <a href={certificate.certificateUrl} target="_blank" rel="noreferrer">View file</a>}
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-slate-100">
+                {faculty.map((member) => {
+                  const name = member.profile?.fullName || member.fullName || member.username;
+                  const isModified = (branchChanges[member._id] || "") !== (member.profile?.branch || "");
+
+                  return (
+                    <tr key={member._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5">
+                        <span className="font-semibold text-slate-800 block">{name}</span>
+                        <span className="text-[11px] text-slate-400">{member.email}</span>
+                      </td>
+                      <td className="p-3.5 font-mono text-slate-700">{member.profile?.employeeId || "—"}</td>
+                      <td className="p-3.5 text-slate-600">{member.profile?.department || "—"}</td>
+                      <td className="p-3.5 text-slate-600">{member.profile?.designation || "—"}</td>
+                      <td className="p-3.5">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {member.status || "approved"}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <select
+                            value={branchChanges[member._id] || ""}
+                            onChange={(e) => setBranchChanges((prev) => ({ ...prev, [member._id]: e.target.value }))}
+                            className="text-xs py-1 px-2 border-slate-300 rounded-lg w-32"
+                          >
+                            <option value="">Unassigned</option>
+                            {branches.map((b) => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            disabled={savingId === member._id || !isModified}
+                            onClick={() => saveBranch(member)}
+                            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                              isModified
+                                ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs"
+                                : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                            }`}
+                          >
+                            {savingId === member._id ? "Saving..." : "Save"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <Pagination page={page} pagination={pagination} setPage={setPage} />
-        </>
+        </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -754,6 +817,7 @@ function FacultyApprovalsPage() {
   const [pendingFaculty, setPendingFaculty] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ open: false, faculty: null, decision: "" });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -774,16 +838,22 @@ function FacultyApprovalsPage() {
     loadPendingFaculty();
   }, []);
 
-  const decideFaculty = async (faculty, decision) => {
-    const name = faculty.profile?.fullName || faculty.fullName || faculty.username;
-    const action = decision === "approve" ? "approve" : "reject";
-    if (!window.confirm(`Are you sure you want to ${action} ${name}'s faculty registration?`)) return;
+  const triggerDecision = (faculty, decision) => {
+    setConfirmModal({ open: true, faculty, decision });
+  };
+
+  const handleDecision = async () => {
+    const { faculty, decision } = confirmModal;
+    if (!faculty) return;
 
     setActionId(faculty._id);
     setMessage("");
+    setError("");
+
     try {
       const data = await fetchJson(`${API_ROOT}/faculty/${faculty._id}/${decision}`, { method: "PATCH" });
-      setMessage(data.message || `Faculty account ${decision}d successfully.`);
+      setMessage(data.message || `Faculty registration ${decision}d successfully.`);
+      setConfirmModal({ open: false, faculty: null, decision: "" });
       await loadPendingFaculty();
     } catch (requestError) {
       setError(requestError.message);
@@ -793,43 +863,241 @@ function FacultyApprovalsPage() {
   };
 
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading">
-        <div><h2>Faculty Approvals</h2><p>Review registrations before granting faculty access.</p></div>
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
+      <div className="pb-4 border-b border-slate-100">
+        <h2 className="text-lg font-bold text-slate-900">Faculty Registration Approvals</h2>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Review new faculty credentials and authorize institutional access.
+        </p>
       </div>
-      {message && <p className="message">{message}</p>}
-      {error && <p className="message error-message">{error}</p>}
+
+      {message && <div className="p-3 text-xs text-emerald-800 bg-emerald-50 rounded-xl">{message}</div>}
+      {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
       {loading ? (
-        <div className="empty"><h3>Loading pending faculty...</h3></div>
+        <LoadingSkeleton count={2} />
       ) : pendingFaculty.length === 0 ? (
-        <div className="empty"><h3>No faculty registrations are waiting for approval.</h3></div>
+        <EmptyState
+          icon="shield"
+          title="No pending faculty registrations"
+          description="All faculty applications have been processed."
+        />
       ) : (
-        <div className="admin-users-list">
-          {pendingFaculty.map((faculty) => (
-            <div key={faculty._id} className="admin-user-row faculty-review-row">
-              <div className="admin-user-info">
-                <div className="admin-user-header">
-                  <strong>{faculty.profile?.fullName || faculty.fullName || faculty.username}</strong>
-                  <span className="role-pill faculty">Pending</span>
+        <div className="space-y-4">
+          {pendingFaculty.map((member) => {
+            const name = member.profile?.fullName || member.fullName || member.username;
+            return (
+              <div key={member._id} className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900">{name}</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      Pending Approval
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    {member.email} · Employee ID: <strong>{member.profile?.employeeId || "—"}</strong>
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {member.profile?.designation || "Faculty"} · Department: {member.profile?.department || "—"} · {member.profile?.institution || "—"}
+                  </p>
                 </div>
-                <span>{faculty.email}</span>
-                <span>{faculty.profile?.designation || "—"} · {faculty.profile?.department || "—"}</span>
-                <span>{faculty.profile?.institution || "—"} · Employee ID: {faculty.profile?.employeeId || "—"}</span>
-                {faculty.createdAt && <span>Registered: {new Date(faculty.createdAt).toLocaleDateString()}</span>}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={actionId === member._id}
+                    onClick={() => triggerDecision(member, "approve")}
+                    className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 rounded-xl shadow-xs"
+                  >
+                    {actionId === member._id ? "Processing..." : "Approve Faculty"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionId === member._id}
+                    onClick={() => triggerDecision(member, "reject")}
+                    className="px-4 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl"
+                  >
+                    Reject
+                  </button>
+                </div>
               </div>
-              <div className="faculty-action-buttons">
-                <button className="verify-button" onClick={() => decideFaculty(faculty, "approve")} disabled={actionId === faculty._id}>
-                  {actionId === faculty._id ? "Processing..." : "Approve"}
-                </button>
-                <button className="reject-button" onClick={() => decideFaculty(faculty, "reject")} disabled={actionId === faculty._id}>
-                  {actionId === faculty._id ? "Processing..." : "Reject"}
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
-    </section>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        onClose={() => setConfirmModal({ open: false, faculty: null, decision: "" })}
+        onConfirm={handleDecision}
+        title={`${confirmModal.decision === "approve" ? "Approve" : "Reject"} Faculty Registration`}
+        message={`Are you sure you want to ${confirmModal.decision} ${confirmModal.faculty?.profile?.fullName || confirmModal.faculty?.fullName || confirmModal.faculty?.username}'s faculty account?`}
+        confirmText={confirmModal.decision === "approve" ? "Approve" : "Reject"}
+        isDestructive={confirmModal.decision === "reject"}
+        isLoading={actionId !== null}
+      />
+    </div>
+  );
+}
+
+function StudentDetailsPage() {
+  const { id } = useParams();
+  const [student, setStudent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchJson(`${API_ROOT}/students/${id}`)
+      .then((data) => setStudent(data.student))
+      .catch((requestError) => setError(requestError.message))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return <LoadingSkeleton count={3} />;
+  if (error) return <div className="p-4 bg-rose-50 text-rose-800 text-sm rounded-xl">{error}</div>;
+  if (!student) return <EmptyState title="Student record not found." />;
+
+  const profile = student.profile || {};
+  const summary = student.achievementSummary || {};
+
+  return (
+    <div className="space-y-6">
+      <Link
+        to="/admin/students"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
+      >
+        <Icon name="arrow-left" className="w-4 h-4" />
+        <span>Back to Student Directory</span>
+      </Link>
+
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">{profile.fullName || student.fullName || student.username}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{student.email} · Roll: {profile.rollNumber || "—"}</p>
+        </div>
+        <Link
+          to={`/admin/students/${student._id}/certificates`}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs"
+        >
+          <Icon name="file-text" className="w-4 h-4" />
+          <span>View Student Certificates ({summary.total ?? 0})</span>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard label="Total Submissions" value={summary.total ?? 0} icon="file-text" />
+        <StatCard label="Approved" value={summary.approved ?? 0} icon="check-circle" variant="verified" />
+        <StatCard label="Pending" value={summary.pending ?? 0} icon="clock" variant="pending" />
+        <StatCard label="Rejected" value={summary.rejected ?? 0} icon="x-circle" variant="rejected" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Icon name="user" className="w-4 h-4 text-indigo-600" />
+            Personal Details
+          </h3>
+          <dl className="space-y-2.5 text-xs">
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Full Name</dt>
+              <dd className="font-semibold text-slate-800">{profile.fullName || student.fullName || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Username</dt>
+              <dd className="font-semibold text-slate-800">{student.username || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Email Address</dt>
+              <dd className="font-semibold text-slate-800">{student.email || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1">
+              <dt className="text-slate-500">Phone</dt>
+              <dd className="font-semibold text-slate-800">{profile.phone || student.phone || "—"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Icon name="graduation-cap" className="w-4 h-4 text-indigo-600" />
+            Academic Enrollment
+          </h3>
+          <dl className="space-y-2.5 text-xs">
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Institution</dt>
+              <dd className="font-semibold text-slate-800">{profile.institution || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Degree & Department</dt>
+              <dd className="font-semibold text-slate-800">{profile.degree || "—"} · {profile.department || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Branch</dt>
+              <dd className="font-semibold text-slate-800">{profile.branch || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Roll Number</dt>
+              <dd className="font-semibold text-slate-800">{profile.rollNumber || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Academic Year</dt>
+              <dd className="font-semibold text-slate-800">{profile.currentAcademicYear || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Semester & Section</dt>
+              <dd className="font-semibold text-slate-800">Sem {profile.currentSemester ?? "—"} · Sec {profile.section || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1">
+              <dt className="text-slate-500">CGPA</dt>
+              <dd className="font-semibold text-indigo-600">{profile.cgpa ?? "—"}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FilterSelect({ id, label, value, values = [], onChange, allLabel = "All" }) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <select id={id} value={value} onChange={onChange} className="text-xs">
+        <option value="">{allLabel}</option>
+        {values.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function Pagination({ page, pagination, setPage }) {
+  if (!pagination.totalPages || pagination.totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
+      <span>Page {page} of {pagination.totalPages} · {pagination.total} records</span>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => setPage(page - 1)}
+          className="px-3 py-1.5 font-medium border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          disabled={page >= pagination.totalPages}
+          onClick={() => setPage(page + 1)}
+          className="px-3 py-1.5 font-medium border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+        >
+          Next
+        </button>
+      </div>
+    </div>
   );
 }
 

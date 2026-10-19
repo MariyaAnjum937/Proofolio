@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Route, Routes, useParams } from "react-router-dom";
 import FacultyMentoring from "./FacultyMentoring";
 import { API_BASE_URL } from "../config/api";
+import Icon from "../components/Icons";
+import { StatusBadge, CategoryBadge } from "../components/Badge";
+import { StatCard } from "../components/StatCard";
+import { Modal, ConfirmModal } from "../components/Modal";
+import { EmptyState, LoadingSkeleton } from "../components/EmptyState";
 
 const FACULTY_API = `${API_BASE_URL}/api/faculty`;
 const REVIEW_API = `${API_BASE_URL}/api/achievements`;
@@ -20,33 +25,79 @@ function FacultyDashboard() {
 
   if (status !== "approved") {
     return (
-      <div className="page">
-        <div className="dashboard-header">
-          <div><h1>Faculty Profile</h1><p>Your account status is {status}.</p></div>
+      <div className="max-w-2xl mx-auto py-12">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
+            <Icon name="clock" className="w-7 h-7" />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900 mb-2">Faculty Account Awaiting Approval</h1>
+          <p className="text-sm text-slate-600 mb-6">
+            {status === "rejected"
+              ? "Your faculty account registration was rejected by an administrator. Please contact your department head."
+              : "Your faculty account is pending review by the institutional administrator. You will be able to access the faculty dashboard once approved."}
+          </p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            Current Status: {status}
+          </div>
         </div>
-        <p className="message">
-          {status === "rejected"
-            ? "Your faculty account was rejected. Please contact the administrator."
-            : "Your account is awaiting administrator approval. Faculty dashboard features will be available after approval."}
-        </p>
       </div>
     );
   }
 
+  const subNavLinkClass = ({ isActive }) =>
+    `inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+      isActive
+        ? "text-indigo-600 bg-indigo-50/80 shadow-xs"
+        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
+    }`;
+
   return (
-    <div className="page faculty-dashboard">
-      <div className="dashboard-header">
-        <div><h1>Faculty Dashboard</h1><p>Review student achievements and manage your professional certificates.</p></div>
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Faculty Hub
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Review branch student achievements, manage academic mentoring, and store professional credentials.
+          </p>
+        </div>
       </div>
-      <nav className="faculty-nav" aria-label="Faculty dashboard">
-        <NavLink to="/faculty" end>Overview</NavLink>
-        <NavLink to="/faculty/students">My Students</NavLink>
-        <NavLink to="/faculty/mentoring">Mentoring</NavLink>
-        <NavLink to="/faculty/student-certificates">Student Certificates</NavLink>
-        <NavLink to="/faculty/my-certificates">My Certificates</NavLink>
-        <NavLink to="/faculty/reviews">Certificate Reviews</NavLink>
-        <NavLink to="/faculty/profile">My Profile</NavLink>
-      </nav>
+
+      {/* Modern Subnav Tabs */}
+      <div className="flex items-center gap-1 p-1.5 bg-white border border-slate-200/90 rounded-xl overflow-x-auto shadow-xs">
+        <NavLink to="/faculty" end className={subNavLinkClass}>
+          <Icon name="award" className="w-4 h-4" />
+          <span>Overview</span>
+        </NavLink>
+        <NavLink to="/faculty/students" className={subNavLinkClass}>
+          <Icon name="users" className="w-4 h-4" />
+          <span>My Students</span>
+        </NavLink>
+        <NavLink to="/faculty/mentoring" className={subNavLinkClass}>
+          <Icon name="graduation-cap" className="w-4 h-4" />
+          <span>Mentoring</span>
+        </NavLink>
+        <NavLink to="/faculty/student-certificates" className={subNavLinkClass}>
+          <Icon name="file-text" className="w-4 h-4" />
+          <span>Student Certificates</span>
+        </NavLink>
+        <NavLink to="/faculty/my-certificates" className={subNavLinkClass}>
+          <Icon name="shield" className="w-4 h-4" />
+          <span>My Certificates</span>
+        </NavLink>
+        <NavLink to="/faculty/reviews" className={subNavLinkClass}>
+          <Icon name="check-circle" className="w-4 h-4" />
+          <span>Review Queue</span>
+        </NavLink>
+        <NavLink to="/faculty/profile" className={subNavLinkClass}>
+          <Icon name="user" className="w-4 h-4" />
+          <span>Faculty Profile</span>
+        </NavLink>
+      </div>
+
+      {/* Routes */}
       <Routes>
         <Route index element={<FacultyOverview />} />
         <Route path="students" element={<FacultyStudents />} />
@@ -83,28 +134,75 @@ function FacultyOverview() {
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
-
   }, []);
 
-  if (loading) return <div className="empty"><h3>Loading faculty overview...</h3></div>;
-  if (error) return <p className="message error-message">{error}</p>;
+  if (loading) return <LoadingSkeleton count={3} />;
+  if (error) return <div className="p-4 rounded-xl bg-rose-50 text-rose-800 text-sm">{error}</div>;
 
   return (
-    <>
-      <div className="stats-row">
-        <Link className="stat-card admin-stat-card" to="/faculty/students"><span>Students</span><strong>{stats.studentCount}</strong></Link>
-        <Link className="stat-card pending-stat admin-stat-card" to="/faculty/reviews"><span>Pending Certificate Reviews</span><strong>{stats.pendingReviews}</strong></Link>
-        <Link className="stat-card verified-stat admin-stat-card" to="/faculty/my-certificates"><span>My Certificates</span><strong>{stats.myCertificates}</strong></Link>
+    <div className="space-y-6">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Branch Students"
+          value={stats.studentCount}
+          icon="users"
+          to="/faculty/students"
+          variant="default"
+        />
+        <StatCard
+          label="Pending Certificate Reviews"
+          value={stats.pendingReviews}
+          icon="clock"
+          to="/faculty/reviews"
+          variant="pending"
+        />
+        <StatCard
+          label="My Faculty Certificates"
+          value={stats.myCertificates}
+          icon="award"
+          to="/faculty/my-certificates"
+          variant="verified"
+        />
       </div>
-      <section className="faculty-card">
-        <h2>Faculty tools</h2>
-        <p>Student profiles, certificate directories, and review actions are limited to students in your administrator-assigned branch. You can also maintain your own professional certificate collection.</p>
-        <div className="faculty-action-buttons">
-          <Link className="verify-button faculty-link-button" to="/faculty/students">Browse students</Link>
-          <Link className="verify-button faculty-link-button" to="/faculty/student-certificates">Browse student certificates</Link>
+
+      {/* Branch Access Notice & Quick Actions */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 space-y-6">
+        <div>
+          <h2 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+            <Icon name="shield" className="w-5 h-5 text-indigo-600" />
+            Branch Authorization Scope
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-3xl">
+            As a departmental faculty member, you have review and verification privileges for students enrolled in your administrator-assigned branch. Student achievement verification maintains institutional academic standards.
+          </p>
         </div>
-      </section>
-    </>
+
+        <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100">
+          <Link
+            to="/faculty/reviews"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors"
+          >
+            <Icon name="check-circle" className="w-4 h-4" />
+            <span>Process Pending Reviews ({stats.pendingReviews})</span>
+          </Link>
+          <Link
+            to="/faculty/students"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-xs transition-colors"
+          >
+            <Icon name="users" className="w-4 h-4" />
+            <span>Browse Branch Students</span>
+          </Link>
+          <Link
+            to="/faculty/mentoring"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-xs transition-colors"
+          >
+            <Icon name="graduation-cap" className="w-4 h-4" />
+            <span>Open Mentoring Console</span>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -146,61 +244,157 @@ function FacultyStudents({ certificateDirectory = false }) {
   };
 
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading"><div><h2>{certificateDirectory ? "Student Certificate Directory" : "My Students"}</h2><p>{pagination.total} students in your assigned branch{certificateDirectory ? " · select a student to view their certificates" : "."}</p></div></div>
-      <div className="admin-filters">
-        <div className="field"><label htmlFor="faculty-student-search">Search name, roll number, or email</label><input id="faculty-student-search" value={search} onChange={change(setSearch)} placeholder="Search students" /></div>
-        <Filter id="faculty-department" label="Department" value={department} options={filters.departments} onChange={change(setDepartment)} />
-        <Filter id="faculty-section" label="Section" value={section} options={filters.sections} onChange={change(setSection)} />
-        <Filter id="faculty-year" label="Academic year" value={academicYear} options={filters.academicYears} onChange={change(setAcademicYear)} />
-        <Filter id="faculty-semester" label="Semester" value={semester} options={filters.semesters} onChange={change(setSemester)} />
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-100">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">
+            {certificateDirectory ? "Student Certificate Directory" : "Branch Students Directory"}
+          </h2>
+          <p className="text-xs text-slate-500">
+            {pagination.total} students registered in your assigned branch
+            {certificateDirectory ? " · click a student to view their certificates" : "."}
+          </p>
+        </div>
       </div>
-      {error && <p className="message error-message">{error}</p>}
-      {loading ? <div className="empty"><h3>Loading students...</h3></div> : students.length === 0 ? (
-        <div className="empty"><h3>No students match these filters.</h3></div>
+
+      {/* Filter Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <div className="field">
+          <label htmlFor="faculty-student-search">Search</label>
+          <input
+            id="faculty-student-search"
+            value={search}
+            onChange={change(setSearch)}
+            placeholder="Name, roll number, or email..."
+            className="text-xs"
+          />
+        </div>
+        <FilterSelect id="faculty-department" label="Department" value={department} options={filters.departments} onChange={change(setDepartment)} />
+        <FilterSelect id="faculty-section" label="Section" value={section} options={filters.sections} onChange={change(setSection)} />
+        <FilterSelect id="faculty-year" label="Academic Year" value={academicYear} options={filters.academicYears} onChange={change(setAcademicYear)} />
+        <FilterSelect id="faculty-semester" label="Semester" value={semester} options={filters.semesters} onChange={change(setSemester)} />
+      </div>
+
+      {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
+      {loading ? (
+        <LoadingSkeleton count={4} />
+      ) : students.length === 0 ? (
+        <EmptyState
+          icon="users"
+          title="No students match these filters"
+          description="Try broadening your search query or clearing filter options."
+        />
       ) : (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead><tr><th>Name</th><th>Roll number</th><th>Department</th><th>Branch</th><th>Section</th><th>Academic year</th><th>Semester</th><th>Certificates</th><th>Verified</th><th>Actions</th></tr></thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student._id}>
-                    <td>{student.profile?.fullName || student.fullName || student.username}</td>
-                    <td>{student.profile?.rollNumber || "—"}</td>
-                    <td>{student.profile?.department || "—"}</td>
-                    <td>{student.profile?.branch || "—"}</td>
-                    <td>{student.profile?.section || "—"}</td>
-                    <td>{student.profile?.currentAcademicYear || "—"}</td>
-                    <td>{student.profile?.currentSemester ?? "—"}</td>
-                    <td>{student.certificateCount ?? 0}</td>
-                    <td>{student.verifiedCertificateCount ?? 0}</td>
-                    <td className="admin-table-actions">
-                      {!certificateDirectory && <Link to={`/faculty/students/${student._id}`}>Profile</Link>}
-                      <Link to={`/faculty/students/${student._id}/certificates`}>Certificates</Link>
-                    </td>
-                  </tr>
-                ))}
+        <div className="space-y-4">
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                  <th className="p-3.5">Student</th>
+                  <th className="p-3.5">Roll Number</th>
+                  <th className="p-3.5">Branch</th>
+                  <th className="p-3.5">Year / Sem</th>
+                  <th className="p-3.5">Section</th>
+                  <th className="p-3.5 text-center">Total Certs</th>
+                  <th className="p-3.5 text-center">Verified</th>
+                  <th className="p-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {students.map((student) => {
+                  const name = student.profile?.fullName || student.fullName || student.username;
+                  return (
+                    <tr key={student._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
+                            {name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-slate-800 block">{name}</span>
+                            <span className="text-[11px] text-slate-400">{student.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3.5 font-mono text-slate-700">{student.profile?.rollNumber || "—"}</td>
+                      <td className="p-3.5 text-slate-600">{student.profile?.branch || "—"}</td>
+                      <td className="p-3.5 text-slate-600">
+                        {student.profile?.currentAcademicYear || "—"}{student.profile?.currentSemester ? ` (Sem ${student.profile.currentSemester})` : ""}
+                      </td>
+                      <td className="p-3.5 text-slate-600">{student.profile?.section || "—"}</td>
+                      <td className="p-3.5 text-center font-semibold text-slate-700">{student.certificateCount ?? 0}</td>
+                      <td className="p-3.5 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {student.verifiedCertificateCount ?? 0}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-right whitespace-nowrap space-x-2">
+                        {!certificateDirectory && (
+                          <Link
+                            to={`/faculty/students/${student._id}`}
+                            className="font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                          >
+                            Profile
+                          </Link>
+                        )}
+                        <Link
+                          to={`/faculty/students/${student._id}/certificates`}
+                          className="font-semibold text-indigo-600 hover:text-indigo-800 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                        >
+                          Certificates
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <Pager page={page} pagination={pagination} setPage={setPage} />
-        </>
+        </div>
       )}
-    </section>
+    </div>
   );
 }
 
-function Filter({ id, label, value, options, onChange }) {
-  return <div className="field"><label htmlFor={id}>{label}</label><select id={id} value={value} onChange={onChange}><option value="">All</option>{options.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>;
+function FilterSelect({ id, label, value, options = [], onChange }) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <select id={id} value={value} onChange={onChange} className="text-xs">
+        <option value="">All</option>
+        {options.map((item) => (
+          <option key={item} value={item}>{item}</option>
+        ))}
+      </select>
+    </div>
+  );
 }
 
 function Pager({ page, pagination, setPage }) {
   if (!pagination.totalPages || pagination.totalPages <= 1) return null;
   return (
-    <div className="admin-pagination">
+    <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
       <span>Page {page} of {pagination.totalPages} · {pagination.total} records</span>
-      <div><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Previous</button><button type="button" disabled={page >= pagination.totalPages} onClick={() => setPage((value) => value + 1)}>Next</button></div>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => setPage((v) => v - 1)}
+          className="px-3 py-1.5 font-medium border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          disabled={page >= pagination.totalPages}
+          onClick={() => setPage((v) => v + 1)}
+          className="px-3 py-1.5 font-medium border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }
@@ -210,54 +404,125 @@ function FacultyStudentProfile() {
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   useEffect(() => {
     requestJson(`${FACULTY_API}/students/${studentId}`)
       .then((data) => setStudent(data.student))
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
   }, [studentId]);
-  if (loading) return <div className="empty"><h3>Loading student profile...</h3></div>;
-  if (error) return <p className="message error-message">{error}</p>;
-  if (!student) return <div className="empty"><h3>Student profile not found.</h3></div>;
+
+  if (loading) return <LoadingSkeleton count={3} />;
+  if (error) return <div className="p-4 bg-rose-50 text-rose-800 text-sm rounded-xl">{error}</div>;
+  if (!student) return <EmptyState title="Student profile not found." />;
+
   const profile = student.profile || {};
   const summary = student.achievementSummary || {};
+
   return (
-    <div className="admin-detail-page">
-      <Link className="text-action" to="/faculty/students">← Back to students</Link>
-      <section className="admin-users-panel">
-        <div className="admin-section-heading">
-          <div><h2>{profile.fullName || student.fullName || student.username}</h2><p>Read-only student profile</p></div>
-          <Link className="verify-button faculty-link-button" to={`/faculty/students/${studentId}/certificates`}>View Certificates</Link>
+    <div className="space-y-6">
+      <Link
+        to="/faculty/students"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
+      >
+        <Icon name="arrow-left" className="w-4 h-4" />
+        <span>Back to Student Directory</span>
+      </Link>
+
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">{profile.fullName || student.fullName || student.username}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Read-only student academic profile · {student.email}</p>
         </div>
-        <div className="admin-detail-grid">
-          <DetailGroup title="Personal Information" items={[["Full name", profile.fullName || student.fullName], ["Username", student.username], ["Email", student.email], ["Phone", profile.phone || student.phone]]} />
-          <DetailGroup title="Academic Information" items={[
-            ["Institution", profile.institution], ["Degree", profile.degree], ["Department", profile.department],
-            ["Branch", profile.branch], ["Roll number", profile.rollNumber], ["Admission year", profile.admissionYear],
-            ["Expected graduation", profile.graduationYear], ["Academic year", profile.currentAcademicYear],
-            ["Semester", profile.currentSemester], ["Section", profile.section], ["CGPA", profile.cgpa]
-          ]} />
+        <Link
+          to={`/faculty/students/${studentId}/certificates`}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs"
+        >
+          <Icon name="award" className="w-4 h-4" />
+          <span>View Student Certificates</span>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard label="Total Submissions" value={summary.total ?? 0} icon="award" />
+        <StatCard label="Verified" value={summary.verified ?? 0} icon="check-circle" variant="verified" />
+        <StatCard label="Pending Review" value={summary.pending ?? 0} icon="clock" variant="pending" />
+        <StatCard label="Rejected" value={summary.rejected ?? 0} icon="x-circle" variant="rejected" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Icon name="user" className="w-4 h-4 text-indigo-600" />
+            Personal Details
+          </h3>
+          <dl className="space-y-2.5 text-xs">
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Full Name</dt>
+              <dd className="font-semibold text-slate-800">{profile.fullName || student.fullName || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Username</dt>
+              <dd className="font-semibold text-slate-800">{student.username || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Email Address</dt>
+              <dd className="font-semibold text-slate-800">{student.email || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1">
+              <dt className="text-slate-500">Phone</dt>
+              <dd className="font-semibold text-slate-800">{profile.phone || student.phone || "—"}</dd>
+            </div>
+          </dl>
         </div>
-      </section>
-      <div className="stats-row admin-detail-stats">
-        <div className="stat-card"><span>Certificates</span><strong>{summary.total ?? 0}</strong></div>
-        <div className="stat-card verified-stat"><span>Verified</span><strong>{summary.verified ?? 0}</strong></div>
-        <div className="stat-card pending-stat"><span>Pending</span><strong>{summary.pending ?? 0}</strong></div>
-        <div className="stat-card"><span>Rejected</span><strong>{summary.rejected ?? 0}</strong></div>
+
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Icon name="graduation-cap" className="w-4 h-4 text-indigo-600" />
+            Academic Details
+          </h3>
+          <dl className="space-y-2.5 text-xs">
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Institution</dt>
+              <dd className="font-semibold text-slate-800">{profile.institution || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Degree</dt>
+              <dd className="font-semibold text-slate-800">{profile.degree || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Department & Branch</dt>
+              <dd className="font-semibold text-slate-800">{profile.department || "—"} / {profile.branch || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Roll Number</dt>
+              <dd className="font-semibold text-slate-800">{profile.rollNumber || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Year & Semester</dt>
+              <dd className="font-semibold text-slate-800">{profile.currentAcademicYear || "—"} (Sem {profile.currentSemester ?? "—"})</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Section</dt>
+              <dd className="font-semibold text-slate-800">{profile.section || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1">
+              <dt className="text-slate-500">CGPA</dt>
+              <dd className="font-semibold text-indigo-600">{profile.cgpa ?? "—"}</dd>
+            </div>
+          </dl>
+        </div>
       </div>
     </div>
   );
-}
-
-function DetailGroup({ title, items }) {
-  return <section className="admin-detail-group"><h3>{title}</h3><dl>{items.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value === null || value === undefined || value === "" ? "—" : value}</dd></div>)}</dl></section>;
 }
 
 function FacultyStudentCertificates() {
   const { studentId } = useParams();
   const [certificates, setCertificates] = useState([]);
   const [student, setStudent] = useState(null);
-  const [remarks, setRemarks] = useState({});
+  const [rejectingItem, setRejectingItem] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("");
   const [type, setType] = useState("");
@@ -270,6 +535,7 @@ function FacultyStudentCertificates() {
   const [processingId, setProcessingId] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
   useEffect(() => {
     const query = new URLSearchParams({ page: String(page), limit: "20" });
     if (studentId) query.set("studentId", studentId);
@@ -279,6 +545,7 @@ function FacultyStudentCertificates() {
     if (academicYear) query.set("academicYear", academicYear);
     if (status) query.set("status", status);
     if (sortOrder) query.set("sortOrder", sortOrder);
+
     setLoading(true);
     Promise.all([
       requestJson(`${FACULTY_API}/students/${studentId}`),
@@ -293,27 +560,16 @@ function FacultyStudentCertificates() {
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
   }, [studentId, search, department, type, academicYear, status, sortOrder, page]);
-  const change = (setter) => (event) => { setter(event.target.value); setPage(1); };
-  const decide = async (certificate, decision) => {
-    const remark = (remarks[certificate._id] || "").trim();
-    if (decision === "reject" && !remark) {
-      setError("Enter a reason before rejecting a certificate.");
-      return;
-    }
-    if (!window.confirm(`Are you sure you want to ${decision} "${certificate.title}"?`)) return;
+
+  const verifyCertificate = async (certificate) => {
     setProcessingId(certificate._id);
     setMessage("");
     setError("");
     try {
-      const options = { method: "PATCH" };
-      if (decision === "reject") {
-        options.headers = { "Content-Type": "application/json" };
-        options.body = JSON.stringify({ rejectionRemark: remark });
-      }
-      const data = await requestJson(`${REVIEW_API}/${certificate._id}/${decision}`, options);
-      setMessage(data.message || `Certificate ${decision}d.`);
+      const data = await requestJson(`${REVIEW_API}/${certificate._id}/verify`, { method: "PATCH" });
+      setMessage(data.message || `Certificate verified.`);
       setCertificates((current) => current.map((item) => item._id === certificate._id
-        ? { ...item, verificationStatus: decision === "verify" ? "verified" : "rejected", rejectionRemark: remark }
+        ? { ...item, verificationStatus: "verified" }
         : item));
     } catch (requestError) {
       setError(requestError.message);
@@ -321,52 +577,189 @@ function FacultyStudentCertificates() {
       setProcessingId(null);
     }
   };
+
+  const submitRejection = async () => {
+    if (!rejectingItem) return;
+    if (!rejectionReason.trim()) {
+      setError("Please provide a feedback remark before rejecting.");
+      return;
+    }
+    setProcessingId(rejectingItem._id);
+    setMessage("");
+    setError("");
+    try {
+      const data = await requestJson(`${REVIEW_API}/${rejectingItem._id}/reject`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rejectionRemark: rejectionReason.trim() })
+      });
+      setMessage(data.message || "Certificate marked rejected with feedback.");
+      setCertificates((current) => current.map((item) => item._id === rejectingItem._id
+        ? { ...item, verificationStatus: "rejected", rejectionRemark: rejectionReason.trim() }
+        : item));
+      setRejectingItem(null);
+      setRejectionReason("");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading">
-        <div><h2>{student?.profile?.fullName || student?.fullName || student?.username || "Student"} · Certificates</h2><p>{pagination.total} certificates · {student?.profile?.rollNumber || "Roll number unavailable"}</p></div>
-        <Link className="text-action" to="/faculty/student-certificates">← Back to student directory</Link>
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-100">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">
+            {student?.profile?.fullName || student?.fullName || student?.username || "Student"} · Certificates
+          </h2>
+          <p className="text-xs text-slate-500">
+            {pagination.total} records · Roll number: {student?.profile?.rollNumber || "—"}
+          </p>
+        </div>
+        <Link
+          to="/faculty/student-certificates"
+          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+        >
+          ← Return to Student Directory
+        </Link>
       </div>
-      <div className="admin-filters">
-        <div className="field"><label htmlFor="faculty-certificate-search">Search student, roll number, or title</label><input id="faculty-certificate-search" value={search} onChange={change(setSearch)} placeholder="Search certificates" /></div>
-        <div className="field"><label htmlFor="faculty-certificate-department">Department</label><input id="faculty-certificate-department" value={department} onChange={change(setDepartment)} placeholder="All departments" /></div>
-        <Filter id="faculty-certificate-type" label="Category" value={type} options={CATEGORIES} onChange={change(setType)} />
-        <div className="field"><label htmlFor="faculty-academic-year">Academic year</label><input id="faculty-academic-year" value={academicYear} onChange={change(setAcademicYear)} placeholder="All years" /></div>
-        <Filter id="faculty-certificate-status" label="Verification" value={status} options={["pending", "verified", "rejected"]} onChange={change(setStatus)} />
-        <div className="field"><label htmlFor="faculty-certificate-sort">Submission date</label><select id="faculty-certificate-sort" value={sortOrder} onChange={change(setSortOrder)}><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></div>
+
+      {/* Filter Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <div className="field">
+          <label htmlFor="f-cert-search">Search</label>
+          <input id="f-cert-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Title..." className="text-xs" />
+        </div>
+        <div className="field">
+          <label htmlFor="f-cert-dept">Department</label>
+          <input id="f-cert-dept" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Dept..." className="text-xs" />
+        </div>
+        <FilterSelect id="f-cert-type" label="Category" value={type} options={CATEGORIES} onChange={(e) => setType(e.target.value)} />
+        <div className="field">
+          <label htmlFor="f-cert-year">Academic Year</label>
+          <input id="f-cert-year" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder="Year..." className="text-xs" />
+        </div>
+        <FilterSelect id="f-cert-status" label="Status" value={status} options={["pending", "verified", "rejected"]} onChange={(e) => setStatus(e.target.value)} />
+        <div className="field">
+          <label htmlFor="f-cert-sort">Order</label>
+          <select id="f-cert-sort" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="text-xs">
+            <option value="desc">Newest First</option>
+            <option value="asc">Oldest First</option>
+          </select>
+        </div>
       </div>
-      {message && <p className="message">{message}</p>}
-      {error && <p className="message error-message">{error}</p>}
-      {loading ? <div className="empty"><h3>Loading student certificates...</h3></div> : certificates.length === 0 ? (
-        <div className="empty"><h3>No certificates match these filters.</h3></div>
+
+      {message && <div className="p-3 text-xs text-emerald-800 bg-emerald-50 rounded-xl">{message}</div>}
+      {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
+      {loading ? (
+        <LoadingSkeleton count={3} />
+      ) : certificates.length === 0 ? (
+        <EmptyState title="No certificates match these filter options." />
       ) : (
-        <>
-          <div className="admin-table-wrap"><table className="admin-table">
-            <thead><tr><th>Title</th><th>Roll number</th><th>Department</th><th>Category</th><th>Organization</th><th>Achievement date</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>{certificates.map((certificate) => (
-              <tr key={certificate._id}>
-                <td>{certificate.title}</td><td>{certificate.profile?.rollNumber || "—"}</td><td>{certificate.profile?.department || "—"}</td>
-                <td>{certificate.type}</td><td>{certificate.organization}</td>
-                <td>{certificate.date ? new Date(certificate.date).toLocaleDateString() : "—"}</td>
-                <td>{certificate.createdAt ? new Date(certificate.createdAt).toLocaleDateString() : "—"}</td>
-                <td><span className={`status-badge ${certificate.verificationStatus || "pending"}`}>{certificate.verificationStatus || "pending"}</span></td>
-                <td className="admin-table-actions">
-                  <Link to={`/faculty/student-certificates/${certificate._id}`}>View</Link>
-                  {certificate.verificationStatus === "pending" && (
-                    <>
-                      <input aria-label={`Rejection reason for ${certificate.title}`} placeholder="Rejection reason" value={remarks[certificate._id] || ""} onChange={(event) => setRemarks((previous) => ({ ...previous, [certificate._id]: event.target.value }))} />
-                      <button className="verify-button" type="button" disabled={processingId === certificate._id} onClick={() => decide(certificate, "verify")}>Approve</button>
-                      <button className="reject-button" type="button" disabled={processingId === certificate._id} onClick={() => decide(certificate, "reject")}>Reject</button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}</tbody>
-          </table></div>
+        <div className="space-y-4">
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                  <th className="p-3.5">Title</th>
+                  <th className="p-3.5">Category</th>
+                  <th className="p-3.5">Organization</th>
+                  <th className="p-3.5">Date</th>
+                  <th className="p-3.5">Status</th>
+                  <th className="p-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {certificates.map((cert) => (
+                  <tr key={cert._id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-3.5 font-semibold text-slate-800 max-w-xs truncate">{cert.title}</td>
+                    <td className="p-3.5"><CategoryBadge category={cert.type} /></td>
+                    <td className="p-3.5 text-slate-600">{cert.organization || "—"}</td>
+                    <td className="p-3.5 text-slate-500">{cert.date ? new Date(cert.date).toLocaleDateString() : "—"}</td>
+                    <td className="p-3.5"><StatusBadge status={cert.verificationStatus} /></td>
+                    <td className="p-3.5 text-right whitespace-nowrap space-x-2">
+                      <Link
+                        to={`/faculty/student-certificates/${cert._id}`}
+                        className="px-2.5 py-1 text-slate-700 bg-slate-100 hover:bg-slate-200 font-semibold rounded-lg"
+                      >
+                        Preview
+                      </Link>
+                      {cert.verificationStatus === "pending" && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={processingId === cert._id}
+                            onClick={() => verifyCertificate(cert)}
+                            className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-semibold rounded-lg border border-emerald-200"
+                          >
+                            Verify
+                          </button>
+                          <button
+                            type="button"
+                            disabled={processingId === cert._id}
+                            onClick={() => {
+                              setRejectingItem(cert);
+                              setRejectionReason("");
+                            }}
+                            className="px-2.5 py-1 text-rose-700 bg-rose-50 hover:bg-rose-100 font-semibold rounded-lg border border-rose-200"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <Pager page={page} pagination={pagination} setPage={setPage} />
-        </>
+        </div>
       )}
-    </section>
+
+      {/* Reject Modal */}
+      <Modal
+        isOpen={Boolean(rejectingItem)}
+        onClose={() => setRejectingItem(null)}
+        title="Reject Certificate Submission"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-600">
+            Please provide specific feedback for <strong>"{rejectingItem?.title}"</strong> explaining why it cannot be verified. The student will be able to review this feedback.
+          </p>
+          <div className="field">
+            <label htmlFor="rejection-reason">Feedback Remarks <span className="text-rose-500">*</span></label>
+            <textarea
+              id="rejection-reason"
+              rows={3}
+              required
+              placeholder="e.g. The certificate image is blurry; please re-upload a clear copy..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setRejectingItem(null)}
+              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={processingId !== null || !rejectionReason.trim()}
+              onClick={submitRejection}
+              className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 rounded-lg"
+            >
+              Confirm Rejection
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
   );
 }
 
@@ -375,37 +768,104 @@ function FacultyCertificateDetail() {
   const [certificate, setCertificate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   useEffect(() => {
     requestJson(`${FACULTY_API}/student-certificates/${certificateId}`)
       .then((data) => setCertificate(data.certificate))
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
   }, [certificateId]);
-  if (loading) return <div className="empty"><h3>Loading certificate...</h3></div>;
-  if (error) return <p className="message error-message">{error}</p>;
-  if (!certificate) return <div className="empty"><h3>Certificate not found.</h3></div>;
+
+  if (loading) return <LoadingSkeleton count={3} />;
+  if (error) return <div className="p-4 bg-rose-50 text-rose-800 text-sm rounded-xl">{error}</div>;
+  if (!certificate) return <EmptyState title="Certificate record not found." />;
+
   const studentId = certificate.user?._id || certificate.user;
+  const isPdf = certificate.certificateUrl && certificate.certificateUrl.split("?")[0].toLowerCase().endsWith(".pdf");
+
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading">
-        <div><h2>{certificate.title}</h2><p>{certificate.profile?.fullName || certificate.user?.fullName || certificate.user?.username} · {certificate.profile?.rollNumber || "Roll number unavailable"}</p></div>
-        <Link className="text-action" to={`/faculty/students/${studentId}/certificates`}>← Student certificates</Link>
-      </div>
-      <DetailGroup title="Certificate details" items={[
-        ["Category", certificate.type], ["Organization", certificate.organization],
-        ["Achievement date", certificate.date ? new Date(certificate.date).toLocaleDateString() : null],
-        ["Submitted", certificate.createdAt ? new Date(certificate.createdAt).toLocaleDateString() : null],
-        ["Status", certificate.verificationStatus], ["Department", certificate.profile?.department]
-      ]} />
-      {certificate.certificateUrl ? (
-        <div className="certificate-preview">
-          <a href={certificate.certificateUrl} target="_blank" rel="noreferrer">Open certificate</a>
-          {certificate.certificateUrl.split("?")[0].toLowerCase().endsWith(".pdf")
-            ? <iframe src={certificate.certificateUrl} title={`${certificate.title} certificate`} />
-            : <img src={certificate.certificateUrl} alt={`${certificate.title} certificate`} />}
+    <div className="space-y-6">
+      <Link
+        to={`/faculty/students/${studentId}/certificates`}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
+      >
+        <Icon name="arrow-left" className="w-4 h-4" />
+        <span>Back to Student Certificates</span>
+      </Link>
+
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <CategoryBadge category={certificate.type} />
+              <StatusBadge status={certificate.verificationStatus} />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">{certificate.title}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Submitted by: {certificate.profile?.fullName || certificate.user?.fullName || certificate.user?.username} · {certificate.profile?.rollNumber || "Roll number not provided"}
+            </p>
+          </div>
+          {certificate.certificateUrl && (
+            <a
+              href={certificate.certificateUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs"
+            >
+              <Icon name="external-link" className="w-4 h-4" />
+              <span>Open Original File</span>
+            </a>
+          )}
         </div>
-      ) : <p className="message">Certificate file is unavailable.</p>}
-    </section>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+            <span className="text-slate-400 block mb-0.5">Issuing Organization</span>
+            <strong className="text-slate-800">{certificate.organization || "—"}</strong>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+            <span className="text-slate-400 block mb-0.5">Achievement Date</span>
+            <strong className="text-slate-800">{certificate.date ? new Date(certificate.date).toLocaleDateString() : "—"}</strong>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+            <span className="text-slate-400 block mb-0.5">Submission Date</span>
+            <strong className="text-slate-800">{certificate.createdAt ? new Date(certificate.createdAt).toLocaleDateString() : "—"}</strong>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+            <span className="text-slate-400 block mb-0.5">Department</span>
+            <strong className="text-slate-800">{certificate.profile?.department || "—"}</strong>
+          </div>
+        </div>
+
+        {certificate.description && (
+          <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200/80 text-xs">
+            <span className="font-semibold text-slate-700 block mb-1">Student Description:</span>
+            <p className="text-slate-600 leading-relaxed">{certificate.description}</p>
+          </div>
+        )}
+
+        {/* Certificate File Display */}
+        <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center min-h-[360px]">
+          {certificate.certificateUrl ? (
+            isPdf ? (
+              <iframe
+                src={certificate.certificateUrl}
+                title={`${certificate.title} preview`}
+                className="w-full h-[520px] border-0"
+              />
+            ) : (
+              <img
+                src={certificate.certificateUrl}
+                alt={`${certificate.title} certificate`}
+                className="max-h-[500px] object-contain p-2"
+              />
+            )
+          ) : (
+            <p className="text-xs text-slate-400">No certificate file attached.</p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -431,9 +891,12 @@ function MyCertificates() {
       setLoading(false);
     }
   };
-  useEffect(() => { loadCertificates(); }, []);
 
-  const updateField = (event) => setForm((previous) => ({ ...previous, [event.target.name]: event.target.value }));
+  useEffect(() => {
+    loadCertificates();
+  }, []);
+
+  const updateField = (event) => setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
   const resetForm = () => {
     setEditingId(null);
     setFile(null);
@@ -455,7 +918,8 @@ function MyCertificates() {
         });
       } else {
         if (!file) {
-          setError("Choose a certificate file to upload.");
+          setError("Please select a certificate file to upload.");
+          setSaving(false);
           return;
         }
         const formData = new FormData();
@@ -463,7 +927,7 @@ function MyCertificates() {
         formData.append("certificate", file);
         data = await requestJson(`${FACULTY_API}/my-certificates`, { method: "POST", body: formData });
       }
-      setMessage(data.message || "Certificate saved.");
+      setMessage(data.message || "Certificate saved successfully.");
       resetForm();
       await loadCertificates();
     } catch (requestError) {
@@ -473,79 +937,180 @@ function MyCertificates() {
     }
   };
 
-  const editCertificate = (certificate) => {
-    setEditingId(certificate._id);
+  const editCertificate = (cert) => {
+    setEditingId(cert._id);
     setFile(null);
     setForm({
-      title: certificate.title || "",
-      type: certificate.type || "Certification",
-      organization: certificate.organization || "",
-      date: certificate.date ? new Date(certificate.date).toISOString().slice(0, 10) : "",
-      expiresAt: certificate.expiresAt ? new Date(certificate.expiresAt).toISOString().slice(0, 10) : "",
-      description: certificate.description || ""
+      title: cert.title || "",
+      type: cert.type || "Certification",
+      organization: cert.organization || "",
+      date: cert.date ? new Date(cert.date).toISOString().slice(0, 10) : "",
+      expiresAt: cert.expiresAt ? new Date(cert.expiresAt).toISOString().slice(0, 10) : "",
+      description: cert.description || ""
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
-    <div className="admin-detail-page">
-      <form className="admin-form faculty-certificate-form" onSubmit={submit}>
-        <h2>{editingId ? "Edit Certificate Details" : "Upload Professional Certificate"}</h2>
-        <p>These files belong to your faculty account. Newly uploaded certificates are not marked verified.</p>
-        <div className="admin-filters">
-          <FieldInput id="faculty-cert-title" name="title" label="Certificate title" value={form.title} onChange={updateField} required />
-          <div className="field"><label htmlFor="faculty-cert-type">Category</label><select id="faculty-cert-type" name="type" value={form.type} onChange={updateField}>{CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></div>
-          <FieldInput id="faculty-cert-org" name="organization" label="Issuing organization" value={form.organization} onChange={updateField} required />
-          <FieldInput id="faculty-cert-date" name="date" label="Issue date" type="date" value={form.date} onChange={updateField} required />
-          <FieldInput id="faculty-cert-expiry" name="expiresAt" label="Expiry date (optional)" type="date" value={form.expiresAt} onChange={updateField} />
-          {!editingId && <div className="field"><label htmlFor="faculty-cert-file">Certificate file (PDF or image, max 10 MB)</label><input id="faculty-cert-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => setFile(event.target.files?.[0] || null)} required /></div>}
-          <div className="field field-wide"><label htmlFor="faculty-cert-description">Description (optional)</label><textarea id="faculty-cert-description" name="description" value={form.description} onChange={updateField} rows="3" /></div>
+    <div className="space-y-6">
+      {/* Upload / Edit Form */}
+      <form onSubmit={submit} className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">
+              {editingId ? "Edit Professional Certificate Metadata" : "Upload Professional Faculty Certificate"}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Store faculty certifications, pedagogy credentials, publications, and honors.
+            </p>
+          </div>
+          {editingId && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="text-xs text-slate-500 hover:text-slate-800 font-semibold"
+            >
+              Cancel Edit
+            </button>
+          )}
         </div>
-        {error && <p className="message error-message">{error}</p>}
-        {message && <p className="message">{message}</p>}
-        <div className="faculty-action-buttons">
-          <button className="verify-button" type="submit" disabled={saving}>{saving ? "Saving..." : editingId ? "Save Changes" : "Upload Certificate"}</button>
-          {editingId && <button className="reject-button" type="button" onClick={resetForm}>Cancel</button>}
+
+        {message && <div className="p-3 text-xs text-emerald-800 bg-emerald-50 rounded-xl">{message}</div>}
+        {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="field">
+            <label htmlFor="f-cert-title">Title <span className="text-rose-500">*</span></label>
+            <input id="f-cert-title" name="title" required value={form.title} onChange={updateField} placeholder="e.g. Certified Data Scientist" />
+          </div>
+
+          <div className="field">
+            <label htmlFor="f-cert-category">Category</label>
+            <select id="f-cert-category" name="type" value={form.type} onChange={updateField}>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="f-cert-org">Issuing Organization <span className="text-rose-500">*</span></label>
+            <input id="f-cert-org" name="organization" required value={form.organization} onChange={updateField} placeholder="e.g. IEEE, NPTEL" />
+          </div>
+
+          <div className="field">
+            <label htmlFor="f-cert-date">Issue Date <span className="text-rose-500">*</span></label>
+            <input id="f-cert-date" name="date" type="date" required value={form.date} onChange={updateField} />
+          </div>
+
+          <div className="field">
+            <label htmlFor="f-cert-expiry">Expiry Date (Optional)</label>
+            <input id="f-cert-expiry" name="expiresAt" type="date" value={form.expiresAt} onChange={updateField} />
+          </div>
+
+          {!editingId && (
+            <div className="field">
+              <label htmlFor="f-cert-file">Certificate File (Max 10 MB) <span className="text-rose-500">*</span></label>
+              <input
+                id="f-cert-file"
+                type="file"
+                required
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700"
+              />
+            </div>
+          )}
+
+          <div className="field sm:col-span-2 lg:col-span-3">
+            <label htmlFor="f-cert-desc">Description (Optional)</label>
+            <textarea id="f-cert-desc" name="description" rows={2} value={form.description} onChange={updateField} placeholder="Details or course scope..." />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          {editingId && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs disabled:bg-indigo-400"
+          >
+            {saving ? "Saving..." : editingId ? "Save Changes" : "Upload Certificate"}
+          </button>
         </div>
       </form>
 
-      <section className="admin-users-panel">
-        <div className="admin-section-heading"><div><h2>My Certificates</h2><p>Your professional achievements and credentials.</p></div></div>
-        {loading ? <div className="empty"><h3>Loading your certificates...</h3></div> : certificates.length === 0 ? (
-          <div className="empty"><h3>You have not uploaded professional certificates yet.</h3></div>
+      {/* List of Certificates */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-4">
+        <h2 className="text-base font-bold text-slate-900 pb-2 border-b border-slate-100">
+          My Professional Credentials
+        </h2>
+
+        {loading ? (
+          <LoadingSkeleton count={2} />
+        ) : certificates.length === 0 ? (
+          <EmptyState title="No faculty certificates recorded yet." description="Upload your professional credentials to build your faculty profile." />
         ) : (
-          <div className="faculty-list">
-            {certificates.map((certificate) => (
-              <article className="faculty-card" key={certificate._id}>
-                <div className="faculty-card-header">
-                  <div><p className="eyebrow small">My professional achievement</p><h2>{certificate.title}</h2></div>
-                  <span className={`status-badge ${certificate.verificationStatus || "pending"}`}>{certificate.verificationStatus || "pending"}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {certificates.map((cert) => (
+              <div key={cert._id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <CategoryBadge category={cert.type} />
+                  <span className="text-[11px] text-slate-400">
+                    {cert.date ? new Date(cert.date).toLocaleDateString() : ""}
+                  </span>
                 </div>
-                <div className="faculty-meta"><p><strong>Category:</strong> {certificate.type}</p><p><strong>Organization:</strong> {certificate.organization}</p><p><strong>Issue date:</strong> {certificate.date ? new Date(certificate.date).toLocaleDateString() : "—"}</p><p><strong>Expiry:</strong> {certificate.expiresAt ? new Date(certificate.expiresAt).toLocaleDateString() : "—"}</p></div>
-                {certificate.description && <p>{certificate.description}</p>}
-                {certificate.certificateUrl ? <a href={certificate.certificateUrl} target="_blank" rel="noreferrer">Open certificate file</a> : <p className="message">Certificate file is unavailable.</p>}
-                <div className="faculty-action-buttons"><button className="verify-button" type="button" onClick={() => editCertificate(certificate)}>Edit metadata</button></div>
-                {certificate.verificationStatus === "pending" && <p className="message">This certificate is not verified; no faculty-certificate review workflow is currently enabled.</p>}
-              </article>
+
+                <h3 className="text-sm font-bold text-slate-900">{cert.title}</h3>
+                <p className="text-slate-600 font-medium">{cert.organization}</p>
+
+                {cert.description && <p className="text-slate-500 line-clamp-2">{cert.description}</p>}
+
+                <div className="pt-2 flex items-center justify-between border-t border-slate-200/80">
+                  {cert.certificateUrl ? (
+                    <a
+                      href={cert.certificateUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
+                    >
+                      <span>View File</span>
+                      <Icon name="external-link" className="w-3.5 h-3.5" />
+                    </a>
+                  ) : <span className="text-slate-400">No file</span>}
+
+                  <button
+                    type="button"
+                    onClick={() => editCertificate(cert)}
+                    className="px-2.5 py-1 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
-}
-
-function FieldInput({ id, name, label, value, onChange, type = "text", required = false }) {
-  return <div className="field"><label htmlFor={id}>{label}</label><input id={id} name={name} type={type} value={value} onChange={onChange} required={required} /></div>;
 }
 
 function CertificateReviews() {
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
-  const [remarks, setRemarks] = useState({});
+  const [rejectModalItem, setRejectModalItem] = useState(null);
+  const [rejectionRemark, setRejectionRemark] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
   const load = async () => {
     setLoading(true);
     try {
@@ -558,26 +1123,44 @@ function CertificateReviews() {
       setLoading(false);
     }
   };
-  useEffect(() => { load(); }, []);
 
-  const decide = async (achievement, decision) => {
-    const remark = (remarks[achievement._id] || "").trim();
-    if (decision === "reject" && !remark) {
-      setError("Enter a reason before rejecting a certificate.");
-      return;
-    }
-    if (!window.confirm(`Are you sure you want to ${decision} "${achievement.title}"?`)) return;
+  useEffect(() => {
+    load();
+  }, []);
+
+  const verifyItem = async (achievement) => {
     setProcessingId(achievement._id);
     setError("");
     setMessage("");
     try {
-      const options = { method: "PATCH" };
-      if (decision === "reject") {
-        options.headers = { "Content-Type": "application/json" };
-        options.body = JSON.stringify({ rejectionRemark: remark });
-      }
-      const data = await requestJson(`${REVIEW_API}/${achievement._id}/${decision}`, options);
-      setMessage(data.message || `Certificate ${decision}d.`);
+      const data = await requestJson(`${REVIEW_API}/${achievement._id}/verify`, { method: "PATCH" });
+      setMessage(data.message || "Certificate verified successfully.");
+      await load();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const confirmRejection = async () => {
+    if (!rejectModalItem) return;
+    if (!rejectionRemark.trim()) {
+      setError("Please provide a reason before rejecting.");
+      return;
+    }
+    setProcessingId(rejectModalItem._id);
+    setError("");
+    setMessage("");
+    try {
+      const data = await requestJson(`${REVIEW_API}/${rejectModalItem._id}/reject`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rejectionRemark: rejectionRemark.trim() })
+      });
+      setMessage(data.message || "Certificate rejected with feedback remarks.");
+      setRejectModalItem(null);
+      setRejectionRemark("");
       await load();
     } catch (requestError) {
       setError(requestError.message);
@@ -587,33 +1170,119 @@ function CertificateReviews() {
   };
 
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading"><div><h2>Certificate Reviews</h2><p>Review student-submitted certificates. Faculty-owned certificates are not included.</p></div></div>
-      {message && <p className="message">{message}</p>}
-      {error && <p className="message error-message">{error}</p>}
-      {loading ? <div className="empty"><h3>Loading pending reviews...</h3></div> : achievements.length === 0 ? (
-        <div className="empty"><h3>No student certificates are waiting for review.</h3></div>
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
+      <div className="pb-4 border-b border-slate-100">
+        <h2 className="text-lg font-bold text-slate-900">Certificate Review Queue</h2>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Review and verify student certificate submissions for your branch.
+        </p>
+      </div>
+
+      {message && <div className="p-3 text-xs text-emerald-800 bg-emerald-50 rounded-xl">{message}</div>}
+      {error && <div className="p-3 text-xs text-rose-800 bg-rose-50 rounded-xl">{error}</div>}
+
+      {loading ? (
+        <LoadingSkeleton count={3} />
+      ) : achievements.length === 0 ? (
+        <EmptyState
+          icon="check-circle"
+          title="Review Queue is Clear"
+          description="There are currently no student certificates waiting for review in your branch."
+        />
       ) : (
-        <div className="faculty-list">
-          {achievements.map((achievement) => (
-            <article className="faculty-card" key={achievement._id}>
-              <div className="faculty-card-header">
-                <div><p className="eyebrow small">Student submission</p><h2>{achievement.title}</h2><p>{achievement.user?.fullName || achievement.user?.username} · {achievement.user?.email}</p></div>
-                <span className="status-badge pending">Pending</span>
+        <div className="space-y-4">
+          {achievements.map((item) => (
+            <div key={item._id} className="p-5 rounded-xl border border-slate-200 bg-slate-50/40 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <CategoryBadge category={item.type} />
+                  <StatusBadge status="pending" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
+                <p className="text-xs text-slate-600">
+                  Student: <strong className="text-slate-800">{item.user?.fullName || item.user?.username}</strong> ({item.user?.email}) · Org: {item.organization || "—"}
+                </p>
+                {item.description && <p className="text-xs text-slate-500 line-clamp-2">{item.description}</p>}
+                {item.certificateUrl && (
+                  <a
+                    href={item.certificateUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 pt-1"
+                  >
+                    <span>View Certificate Proof</span>
+                    <Icon name="external-link" className="w-3.5 h-3.5" />
+                  </a>
+                )}
               </div>
-              <div className="faculty-meta"><p><strong>Category:</strong> {achievement.type}</p><p><strong>Organization:</strong> {achievement.organization}</p><p><strong>Achievement date:</strong> {achievement.date ? new Date(achievement.date).toLocaleDateString() : "—"}</p></div>
-              {achievement.description && <p>{achievement.description}</p>}
-              {achievement.certificateUrl ? <a href={achievement.certificateUrl} target="_blank" rel="noreferrer">Open certificate file</a> : <p className="message">Certificate file is unavailable.</p>}
-              <div className="field rejection-remark-field"><label htmlFor={`faculty-reason-${achievement._id}`}>Rejection reason (required to reject)</label><textarea id={`faculty-reason-${achievement._id}`} value={remarks[achievement._id] || ""} onChange={(event) => setRemarks((previous) => ({ ...previous, [achievement._id]: event.target.value }))} rows="2" /></div>
-              <div className="faculty-action-buttons">
-                <button className="verify-button" type="button" disabled={processingId === achievement._id} onClick={() => decide(achievement, "verify")}>{processingId === achievement._id ? "Processing..." : "Approve certificate"}</button>
-                <button className="reject-button" type="button" disabled={processingId === achievement._id} onClick={() => decide(achievement, "reject")}>{processingId === achievement._id ? "Processing..." : "Reject certificate"}</button>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={processingId === item._id}
+                  onClick={() => verifyItem(item)}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 rounded-xl shadow-xs transition-colors"
+                >
+                  {processingId === item._id ? "Processing..." : "Approve Certificate"}
+                </button>
+                <button
+                  type="button"
+                  disabled={processingId === item._id}
+                  onClick={() => {
+                    setRejectModalItem(item);
+                    setRejectionRemark("");
+                  }}
+                  className="px-4 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 disabled:opacity-50 rounded-xl transition-colors"
+                >
+                  Reject with Remarks
+                </button>
               </div>
-            </article>
+            </div>
           ))}
         </div>
       )}
-    </section>
+
+      {/* Reject Modal Dialog */}
+      <Modal
+        isOpen={Boolean(rejectModalItem)}
+        onClose={() => setRejectModalItem(null)}
+        title="Reject Certificate Submission"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-600">
+            Provide feedback explaining why <strong>"{rejectModalItem?.title}"</strong> cannot be approved.
+          </p>
+          <div className="field">
+            <label htmlFor="modal-rejection-remark">Rejection Reason / Remark <span className="text-rose-500">*</span></label>
+            <textarea
+              id="modal-rejection-remark"
+              rows={3}
+              required
+              placeholder="e.g. Please upload the official signed completion certificate instead of an enrollment receipt."
+              value={rejectionRemark}
+              onChange={(e) => setRejectionRemark(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setRejectModalItem(null)}
+              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={processingId !== null || !rejectionRemark.trim()}
+              onClick={confirmRejection}
+              className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 rounded-lg"
+            >
+              Confirm Rejection
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
   );
 }
 
@@ -622,22 +1291,110 @@ function FacultyProfile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   useEffect(() => {
     requestJson(`${FACULTY_API}/profile`)
-      .then((data) => { setUser(data.user); setProfile(data.profile); })
+      .then((data) => {
+        setUser(data.user);
+        setProfile(data.profile);
+      })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
   }, []);
-  if (loading) return <div className="empty"><h3>Loading faculty profile...</h3></div>;
-  if (error) return <p className="message error-message">{error}</p>;
+
+  if (loading) return <LoadingSkeleton count={3} />;
+  if (error) return <div className="p-4 bg-rose-50 text-rose-800 text-sm rounded-xl">{error}</div>;
+
+  const fullName = profile?.fullName || user?.fullName || user?.username || "Faculty Member";
+
   return (
-    <section className="admin-users-panel">
-      <div className="admin-section-heading"><div><h2>My Profile</h2><p>Professional profile information.</p></div><span className="status-badge verified">{user?.status || "approved"}</span></div>
-      <div className="admin-detail-grid">
-        <DetailGroup title="Personal Information" items={[["Full name", profile?.fullName || user?.fullName], ["Username", user?.username], ["Official email", user?.email], ["Phone", profile?.phone || user?.phone]]} />
-        <DetailGroup title="Professional Information" items={[["Institution", profile?.institution], ["Employee ID", profile?.employeeId], ["Department", profile?.department], ["Assigned branch", profile?.branch || "Not assigned"], ["Designation", profile?.designation], ["Specialization", profile?.specialization], ["Years of experience", profile?.experienceYears]]} />
+    <div className="space-y-6">
+      {/* Banner */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-bold text-xl flex items-center justify-center shrink-0">
+            {fullName.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900">{fullName}</h2>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {user?.status || "approved"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {profile?.designation || "Faculty"} · {profile?.department || "Department"} · {user?.email}
+            </p>
+          </div>
+        </div>
       </div>
-    </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Icon name="user" className="w-4 h-4 text-indigo-600" />
+            Personal Details
+          </h3>
+          <dl className="space-y-2.5 text-xs">
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Full Name</dt>
+              <dd className="font-semibold text-slate-800">{profile?.fullName || user?.fullName || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Username</dt>
+              <dd className="font-semibold text-slate-800">{user?.username || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Official Email</dt>
+              <dd className="font-semibold text-slate-800">{user?.email || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1">
+              <dt className="text-slate-500">Phone</dt>
+              <dd className="font-semibold text-slate-800">{profile?.phone || user?.phone || "—"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Icon name="building" className="w-4 h-4 text-indigo-600" />
+            Institutional & Professional Role
+          </h3>
+          <dl className="space-y-2.5 text-xs">
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Institution</dt>
+              <dd className="font-semibold text-slate-800">{profile?.institution || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Employee ID</dt>
+              <dd className="font-semibold text-slate-800">{profile?.employeeId || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Department</dt>
+              <dd className="font-semibold text-slate-800">{profile?.department || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Assigned Review Branch</dt>
+              <dd className="font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                {profile?.branch || "Not Assigned"}
+              </dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Designation</dt>
+              <dd className="font-semibold text-slate-800">{profile?.designation || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1 border-b border-slate-50">
+              <dt className="text-slate-500">Specialization</dt>
+              <dd className="font-semibold text-slate-800">{profile?.specialization || "—"}</dd>
+            </div>
+            <div className="flex justify-between py-1">
+              <dt className="text-slate-500">Years of Experience</dt>
+              <dd className="font-semibold text-slate-800">{profile?.experienceYears ? `${profile.experienceYears} Years` : "—"}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
   );
 }
 

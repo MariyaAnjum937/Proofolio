@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { useState } from "react";
 
 import Home from "./pages/Home";
@@ -10,9 +10,33 @@ import StudentProfile from "./pages/StudentProfile";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentMentoring from "./pages/StudentMentoring";
-import NotificationCenter from "./components/NotificationCenter";
-import { API_BASE_URL } from "./config/api";
+import Navbar from "./components/Navbar";
+import Icon from "./components/Icons";
+import { ThemeProvider } from "./context/ThemeContext";
 
+const getDashboardPath = (role) => {
+  if (role === "faculty") return "/faculty";
+  if (role === "admin") return "/admin";
+  return "/dashboard";
+};
+
+function ProtectedRoute({ currentUser, allowedRoles = [], children }) {
+  const userRole = typeof currentUser?.role === "string"
+    ? currentUser.role.trim().toLowerCase()
+    : null;
+  const isLoggedIn = Boolean(currentUser && userRole);
+
+  if (!isLoggedIn) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  if (allowedRoles.length && !allowedRoles.includes(userRole)) {
+    const fallbackPath = getDashboardPath(userRole);
+    return <Navigate to={fallbackPath} replace />;
+  }
+
+  return children;
+}
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -36,197 +60,103 @@ function App() {
     }
   });
 
-  const navigate = useNavigate();
-  const userRole = typeof currentUser?.role === "string"
-    ? currentUser.role.trim().toLowerCase()
-    : null;
-  const isLoggedIn = Boolean(currentUser && userRole);
-
-  const getDashboardPath = (role) => {
-    if (role === "faculty") return "/faculty";
-    if (role === "admin") return "/admin";
-    return "/dashboard";
-  };
-
-  const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-    if (!isLoggedIn) {
-      return <Navigate to="/signin" replace />;
-    }
-
-    if (allowedRoles.length && !allowedRoles.includes(userRole)) {
-      const fallbackPath = getDashboardPath(userRole);
-      return <Navigate to={fallbackPath} replace />;
-    }
-
-    return children;
-  };
-
-  const handleLogout = async () => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/sign-out`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("proofolioUser");
-        setCurrentUser(null);
-        navigate("/");
-      } else {
-        console.log(data.message);
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
   return (
-    <>
-      <div className="app-background">
-        <img
-          src="https://res.cloudinary.com/ddcg0rzlo/image/upload/v1650305343/background_ebzfkk.jpg"
-          className="app-background-img"
-          alt="Background"
-        />
-        <div className="app-background-overlay" />
-      </div>
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-800 dark:selection:bg-indigo-900/40 dark:selection:text-indigo-200 transition-colors duration-150">
+      <Navbar currentUser={currentUser} setCurrentUser={setCurrentUser} />
 
-      <nav className="navbar">
-        <div className="navbar-inner">
-          <NavLink to="/" className="logo">
-            <span className="logo-badge">🏆</span>
-            <span className="logo-text">Proofolio</span>
-          </NavLink>
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/signin" element={<SignIn setCurrentUser={setCurrentUser} />} />
 
-          <div className="nav-links">
-            <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
-              Home
-            </NavLink>
+          <Route
+            path="/create"
+            element={
+              <ProtectedRoute currentUser={currentUser} allowedRoles={["student"]}>
+                <CreateAchievement />
+              </ProtectedRoute>
+            }
+          />
 
-            {isLoggedIn && userRole === "student" && (
-              <>
-                <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active" : "")}>
-                  Dashboard
-                </NavLink>
-                <NavLink to="/mentoring" className={({ isActive }) => (isActive ? "active" : "")}>
-                  My Mentoring
-                </NavLink>
-                <NavLink to="/student-profile" className={({ isActive }) => (isActive ? "active" : "")}>
-                  My Profile
-                </NavLink>
-                <NavLink to="/create" className={({ isActive }) => (isActive ? "active" : "")}>
-                  Add Achievement
-                </NavLink>
-              </>
-            )}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute currentUser={currentUser} allowedRoles={["student"]}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
 
-            {isLoggedIn && userRole === "faculty" && (
-              <NavLink to="/faculty" className={({ isActive }) => (isActive ? "active" : "")}>
-                Faculty Dashboard
-              </NavLink>
-            )}
+          <Route
+            path="/student-profile"
+            element={
+              <ProtectedRoute currentUser={currentUser} allowedRoles={["student"]}>
+                <StudentProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mentoring"
+            element={
+              <ProtectedRoute currentUser={currentUser} allowedRoles={["student"]}>
+                <StudentMentoring />
+              </ProtectedRoute>
+            }
+          />
 
-            {isLoggedIn && ["student", "faculty"].includes(userRole) && <NotificationCenter role={userRole} />}
+          <Route
+            path="/faculty/*"
+            element={
+              <ProtectedRoute currentUser={currentUser} allowedRoles={["faculty"]}>
+                <FacultyDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-            {isLoggedIn && userRole === "admin" && (
-              <NavLink to="/admin" className={({ isActive }) => (isActive ? "active" : "")}>
-                Admin Dashboard
-              </NavLink>
-            )}
+          <Route
+            path="/admin/*"
+            element={
+              <ProtectedRoute currentUser={currentUser} allowedRoles={["admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </main>
 
-            {!isLoggedIn && (
-              <>
-                <NavLink to="/signin" className={({ isActive }) => (isActive ? "active" : "")}>
-                  Sign In
-                </NavLink>
-                <NavLink to="/signup" className="nav-cta">
-                  Sign Up
-                </NavLink>
-              </>
-            )}
+      {/* Production-grade SaaS Footer */}
+      <footer className="mt-auto bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800/80 py-8 text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-md bg-indigo-600 dark:bg-orange-500 flex items-center justify-center text-white">
+              <Icon name="award" className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-semibold text-slate-800 dark:text-orange-500 brand-logo-text">Proofolio</span>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <span>Academic Achievement & Certificate Management System</span>
+          </div>
 
-            {isLoggedIn && (
-              <button onClick={handleLogout} className="logout-button">
-                Sign Out
-              </button>
-            )}
+          <div className="flex items-center gap-6 text-slate-600 dark:text-slate-400">
+            <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+              <Icon name="shield" className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              Verified Institutional Security
+            </span>
+            <span>&copy; {new Date().getFullYear()} Proofolio. All rights reserved.</span>
           </div>
         </div>
-      </nav>
-
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/signin" element={<SignIn setCurrentUser={setCurrentUser} />} />
-
-        <Route
-          path="/create"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <CreateAchievement />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/student-profile"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <StudentProfile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mentoring"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <StudentMentoring />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/faculty/*"
-          element={
-            <ProtectedRoute allowedRoles={["faculty"]}>
-              <FacultyDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/*"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </>
+      </footer>
+    </div>
   );
 }
 
 function AppWrapper() {
   return (
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
