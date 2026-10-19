@@ -66,11 +66,6 @@ Proofolio provides students with a place to submit and track achievements, facul
 
 > **Branch access:** Faculty student access, mentoring, and certificate review are restricted to the branch configured on each faculty profile. New faculty accounts are not assigned a branch automatically. An administrator should verify the faculty record before assigning a branch; unassigned faculty cannot access branch-scoped student features. Existing profiles remain unchanged until an administrator makes an assignment; no data backfill is required.
 
-## Screenshots
-
-No genuine application screenshots or demo video are currently included in the repository. The home page contains a UI mockup, but it is illustrative and is not an application screenshot.
-
-To add a gallery later, capture real screens for each role, place the image files in a tracked documentation or assets folder, and link those files here with relative paths. Avoid including real student or certificate data in screenshots.
 
 ## Technology
 
