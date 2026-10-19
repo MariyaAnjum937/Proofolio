@@ -19,7 +19,6 @@ Proofolio brings student portfolios, faculty certificate review, and academic me
 
 - [Overview](#overview)
 - [Features](#features)
-- [Screenshots](#screenshots)
 - [Technology](#technology)
 - [Architecture](#architecture)
 - [Project structure](#project-structure)
